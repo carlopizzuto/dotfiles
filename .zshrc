@@ -1,8 +1,10 @@
 # === Plugin manager (Antidote) ===
 source ~/.antidote/antidote.zsh
 
+antidote load
+
 # === Source Plugins ===
-source ~/.zsh_plugins.zsh
+# source ~/.zsh_plugins.zsh
 
 # === Tab Completions Menu ===
 autoload -Uz compinit
