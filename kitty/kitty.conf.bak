@@ -1,0 +1,17 @@
+
+# Font Confiurations
+font_size	16
+
+
+# Background Configuration
+# foreground 		#dddddd
+# background 		#000000
+background_opacity 	0.7
+
+
+
+
+# BEGIN_KITTY_THEME
+# Gruvbox Dark
+include current-theme.conf
+# END_KITTY_THEME
