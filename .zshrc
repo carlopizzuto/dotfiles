@@ -141,5 +141,11 @@ alias clear='__kitty_clear'
 export JUNIT_HOME="$HOME/CS/JUNIT"
 export CLASSPATH="$JUNIT_HOME/junit-4.13.2.jar:$JUNIT_HOME/hamcrest-core-1.3.jar"
 
+# ---------------------------------------------------------------------------
+# 9.  Zsh plugins
+# ---------------------------------------------------------------------------
+eval "$(fzf --bash)"
+eval "$(zoxide init zsh)"
+
 # End of file ---------------------------------------------------------------
 
