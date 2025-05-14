@@ -1,4 +1,4 @@
-# ~/.zshrc — streamlined on 2025‑04‑30
+
 # ---------------------------------------------------------------------------
 # 0.  Clean, deterministic PATH (remove duplicates, predictable order)
 # ---------------------------------------------------------------------------
@@ -145,7 +145,7 @@ export CLASSPATH="$JUNIT_HOME/junit-4.13.2.jar:$JUNIT_HOME/hamcrest-core-1.3.jar
 # 9.  Zsh plugins
 # ---------------------------------------------------------------------------
 source <(fzf --zsh)
-eval "$(zoxide init zsh)"
+eval "$(zoxide init zsh --cmd cd)"
 
 # End of file ---------------------------------------------------------------
 
