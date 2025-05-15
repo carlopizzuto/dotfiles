@@ -1,4 +1,3 @@
-
 # ---------------------------------------------------------------------------
 # 0.  Clean, deterministic PATH (remove duplicates, predictable order)
 # ---------------------------------------------------------------------------
@@ -113,7 +112,6 @@ alias ...='cd ../..'
 # 7.  Keybinds & Kitty clear
 # ---------------------------------------------------------------------------
 # Accept autosuggestion with Tab
-bindkey '^I' autosuggest-accept
 # Manually trigger completion with Ctrl‑Space
 bindkey '^ ' expand-or-complete
 # Disable automatic menu completion (prefer manual)
@@ -146,6 +144,9 @@ export CLASSPATH="$JUNIT_HOME/junit-4.13.2.jar:$JUNIT_HOME/hamcrest-core-1.3.jar
 # ---------------------------------------------------------------------------
 source <(fzf --zsh)
 eval "$(zoxide init zsh --cmd cd)"
+
+# Restore Tab to accept autosuggestion after plugins
+bindkey '^I' autosuggest-accept
 
 # End of file ---------------------------------------------------------------
 
