@@ -14,6 +14,9 @@ path=(
   /opt/homebrew/bin
   /opt/homebrew/sbin
 
+  # NPM
+  $HOME/.npm-global/bin
+
   # language & env managers
   /opt/miniconda3/bin            
   $HOME/.nvm/versions/node/v21.6.1/bin
@@ -150,3 +153,6 @@ bindkey '^I' autosuggest-accept
 
 # End of file ---------------------------------------------------------------
 
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
