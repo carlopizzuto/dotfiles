@@ -1,4 +1,9 @@
 # ---------------------------------------------------------------------------
+# -1. Auto-sync dotfiles from main (background, no shell lag)
+# ---------------------------------------------------------------------------
+(cd ~/.dotfiles && git pull --ff-only origin main &>/dev/null &)
+
+# ---------------------------------------------------------------------------
 # 0.  Clean, deterministic PATH (remove duplicates, predictable order)
 # ---------------------------------------------------------------------------
 typeset -U path PATH
