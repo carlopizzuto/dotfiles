@@ -1,29 +1,25 @@
 # ---------------------------------------------------------------------------
-# 0.  Clean, deterministic PATH (remove duplicates, predictable order)
+# -1. Auto-sync dotfiles from main (background, no shell lag)
 # ---------------------------------------------------------------------------
-#  • $path is a zsh array → easier to reason about
-#  • typeset -U eliminates later duplicates automatically
-#  • You can append project‑local dirs later; FIRST win stays
+(cd ~/.dotfiles && git pull --ff-only origin main &>/dev/null &)
+
+# ---------------------------------------------------------------------------
+# 0.  Clean, deterministic PATH (remove duplicates, predictable order)
 # ---------------------------------------------------------------------------
 typeset -U path PATH
 path=(
   # personal scripts
   $HOME/.local/bin
 
-  # Homebrew (Apple‑silicon)
-  /opt/homebrew/bin
-  /opt/homebrew/sbin
-
   # NPM
   $HOME/.npm-global/bin
 
   # language & env managers
-  /opt/miniconda3/bin            
   $HOME/.nvm/versions/node/v21.6.1/bin
 
   # toolchains you actually use
   $HOME/google-cloud-sdk/bin
-  /usr/local/mysql/bin           
+  /usr/local/mysql/bin
 
   # system fallbacks
   /usr/local/bin
@@ -31,9 +27,6 @@ path=(
   /bin
   /usr/sbin
   /sbin
-
-  # XQuartz 
-  /opt/X11/bin
 )
 export PATH
 
@@ -43,20 +36,28 @@ function path:ls() {
 }
 
 # ---------------------------------------------------------------------------
-# 1.  Plugin manager — Antidote
+# 1.  Platform-specific config
+# ---------------------------------------------------------------------------
+case "$(uname -s)" in
+  Darwin) source ~/.dotfiles/zsh/zshrc.darwin ;;
+  Linux)  source ~/.dotfiles/zsh/zshrc.linux  ;;
+esac
+
+# ---------------------------------------------------------------------------
+# 2.  Plugin manager — Antidote
 # ---------------------------------------------------------------------------
 source ~/.antidote/antidote.zsh
 antidote load
 
 # ---------------------------------------------------------------------------
-# 2.  Completion menu tweaks
+# 3.  Completion menu tweaks
 # ---------------------------------------------------------------------------
 autoload -Uz compinit
 compinit
 zstyle ':completion:*' menu select
 
 # ---------------------------------------------------------------------------
-# 3.  History settings
+# 4.  History settings
 # ---------------------------------------------------------------------------
 HISTFILE=~/.zsh_history
 HISTSIZE=10000
@@ -64,7 +65,7 @@ SAVEHIST=10000
 setopt HIST_IGNORE_DUPS HIST_FIND_NO_DUPS SHARE_HISTORY INC_APPEND_HISTORY EXTENDED_HISTORY
 
 # ---------------------------------------------------------------------------
-# 4.  Minimal prompt with Git branch
+# 5.  Minimal prompt with Git branch
 # ---------------------------------------------------------------------------
 autoload -Uz vcs_info
 precmd() { vcs_info }
@@ -73,17 +74,8 @@ PROMPT='%F{blue}%n@%m%f %F{green}%~%f ${vcs_info_msg_0_}%# '
 zstyle ':vcs_info:git:*' formats '(%b)'
 
 # ---------------------------------------------------------------------------
-# 5.  Dev environment hooks
+# 6.  Dev environment hooks
 # ---------------------------------------------------------------------------
-
-# ---- Conda (manual) --------------------------------------------------------
-__conda_setup="$(/opt/miniconda3/bin/conda shell.zsh hook 2> /dev/null)"
-if [[ $? -eq 0 ]]; then
-  eval "$__conda_setup"
-else
-  [[ -f /opt/miniconda3/etc/profile.d/conda.sh ]] && source /opt/miniconda3/etc/profile.d/conda.sh
-fi
-unset __conda_setup
 
 # ---- Node Version Manager --------------------------------------------------
 export NVM_DIR="$HOME/.nvm"
@@ -94,8 +86,13 @@ export NVM_DIR="$HOME/.nvm"
 [[ -f "$HOME/google-cloud-sdk/path.zsh.inc"       ]] && source "$HOME/google-cloud-sdk/path.zsh.inc"
 [[ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]] && source "$HOME/google-cloud-sdk/completion.zsh.inc"
 
+# ---- Pyenv -----------------------------------------------------------------
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
 # ---------------------------------------------------------------------------
-# 6.  Aliases
+# 7.  Aliases
 # ---------------------------------------------------------------------------
 # -- git
 alias gs='git status'
@@ -112,15 +109,11 @@ alias ..='cd ..'
 alias ...='cd ../..'
 
 # ---------------------------------------------------------------------------
-# 7.  Keybinds & Kitty clear
+# 8.  Keybinds & Kitty clear
 # ---------------------------------------------------------------------------
-# Accept autosuggestion with Tab
-# Manually trigger completion with Ctrl‑Space
 bindkey '^ ' expand-or-complete
-# Disable automatic menu completion (prefer manual)
 unsetopt MENU_COMPLETE
 
-# Kitty‑specific clear (keeps scrollback)
 function __kitty_clear() {
   local ts=$(date '+%Y-%m-%d %H:%M:%S')
   print -P "\n\n%F{244}─« cleared - $ts »─────────────────────────────────────────%f\n"
@@ -137,13 +130,13 @@ bindkey '^L' __kitty_clear
 alias clear='__kitty_clear'
 
 # ---------------------------------------------------------------------------
-# 8.  Misc. environment vars
+# 9.  Misc. environment vars
 # ---------------------------------------------------------------------------
 export JUNIT_HOME="$HOME/CS/JUNIT"
 export CLASSPATH="$JUNIT_HOME/junit-4.13.2.jar:$JUNIT_HOME/hamcrest-core-1.3.jar"
 
 # ---------------------------------------------------------------------------
-# 9.  Zsh plugins
+# 10. Zsh plugins
 # ---------------------------------------------------------------------------
 source <(fzf --zsh)
 eval "$(zoxide init zsh --cmd cd)"
@@ -151,8 +144,7 @@ eval "$(zoxide init zsh --cmd cd)"
 # Restore Tab to accept autosuggestion after plugins
 bindkey '^I' autosuggest-accept
 
-# End of file ---------------------------------------------------------------
-
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
+# ---------------------------------------------------------------------------
+# 11. Machine-local overrides (not tracked in git)
+# ---------------------------------------------------------------------------
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
