@@ -1,0 +1,168 @@
+# ======================================
+# ========== NORMALIZATION =============
+# ======================================
+enable-normalization-flatten-containers = false
+enable-normalization-opposite-orientation-for-nested-containers = false
+
+
+# ======================================
+# ========== WORKSPACE ASSIGNMENT ======
+# ======================================
+[workspace-to-monitor-force-assignment]
+1 = 'main'
+2 = 'main'
+3 = 'main'
+4 = 'main'
+5 = 'main'
+6 = 'main'
+7 = 'main'
+8 = 'main'
+9 = 'main'
+10 = 'main'
+11 = 'secondary'
+12 = 'secondary'
+13 = 'secondary'
+14 = 'secondary'
+15 = 'secondary'
+16 = 'secondary'
+17 = 'secondary'
+18 = 'secondary'
+19 = 'secondary'
+20 = 'secondary'
+
+
+# ======================================
+# ========== KEYBINDINGS: MAIN =========
+# ======================================
+[mode.main.binding]
+    # Open new Kitty terminal window
+    alt-enter = '''exec-and-forget osascript -e '
+    tell application "kitty"
+        tell application "System Events"
+            tell process "kitty"
+                click menu item "New OS Window" of menu "Shell" of menu bar 1
+            end tell
+        end tell
+    end tell'
+    '''
+
+    # ======================================
+    # ========== FOCUS (i3-style) ===========
+    # ======================================
+    alt-h = 'focus --boundaries-action wrap-around-the-workspace left'
+    alt-j = 'focus --boundaries-action wrap-around-the-workspace down'
+    alt-k = 'focus --boundaries-action wrap-around-the-workspace up'
+    alt-l = 'focus --boundaries-action wrap-around-the-workspace right'
+
+    # ======================================
+    # ========== MOVE WINDOW ===============
+    # ======================================
+    alt-shift-h = 'move left'
+    alt-shift-j = 'move down'
+    alt-shift-k = 'move up'
+    alt-shift-l = 'move right'
+
+    # ======================================
+    # ========== SPLITS / LAYOUT ===========
+    # ======================================
+    # Consider using 'join-with' command as a 'split' replacement if you want to enable
+    # normalizations
+    alt-shift-u = 'split horizontal'
+    alt-shift-d = 'split vertical'
+
+    alt-f = 'fullscreen'
+
+    alt-s = 'layout v_accordion' # 'layout stacking' in i3
+    alt-w = 'layout h_accordion' # 'layout tabbed' in i3
+    alt-e = 'layout tiles horizontal vertical' # 'layout toggle split' in i3
+
+    # i3: floating toggle
+    alt-shift-space = 'layout floating tiling'
+
+    # ======================================
+    # ========== WORKSPACES ================
+    # ======================================
+    alt-1 = ['workspace 1', 'move-mouse monitor-force-center']
+    alt-2 = ['workspace 2', 'move-mouse monitor-force-center']
+    alt-3 = ['workspace 3', 'move-mouse monitor-force-center']
+    alt-4 = ['workspace 4', 'move-mouse monitor-force-center']
+    alt-5 = ['workspace 5', 'move-mouse monitor-force-center']
+    alt-6 = ['workspace 6', 'move-mouse monitor-force-center']
+    alt-7 = ['workspace 7', 'move-mouse monitor-force-center']
+    alt-8 = ['workspace 8', 'move-mouse monitor-force-center']
+    alt-9 = ['workspace 9', 'move-mouse monitor-force-center']
+    alt-0 = ['workspace 10', 'move-mouse monitor-force-center']
+
+    alt-cmd-1 = ['workspace 11', 'move-mouse monitor-force-center']
+    alt-cmd-2 = ['workspace 12', 'move-mouse monitor-force-center']
+    alt-cmd-3 = ['workspace 13', 'move-mouse monitor-force-center']
+    alt-cmd-4 = ['workspace 14', 'move-mouse monitor-force-center']
+    alt-cmd-5 = ['workspace 15', 'move-mouse monitor-force-center']
+    alt-cmd-6 = ['workspace 16', 'move-mouse monitor-force-center']
+    alt-cmd-7 = ['workspace 17', 'move-mouse monitor-force-center']
+    alt-cmd-8 = ['workspace 18', 'move-mouse monitor-force-center']
+    alt-cmd-9 = ['workspace 19', 'move-mouse monitor-force-center']
+    alt-cmd-0 = ['workspace 20', 'move-mouse monitor-force-center']
+
+    alt-shift-1 = 'move-node-to-workspace 1'
+    alt-shift-2 = 'move-node-to-workspace 2'
+    alt-shift-3 = 'move-node-to-workspace 3'
+    alt-shift-4 = 'move-node-to-workspace 4'
+    alt-shift-5 = 'move-node-to-workspace 5'
+    alt-shift-6 = 'move-node-to-workspace 6'
+    alt-shift-7 = 'move-node-to-workspace 7'
+    alt-shift-8 = 'move-node-to-workspace 8'
+    alt-shift-9 = 'move-node-to-workspace 9'
+    alt-shift-0 = 'move-node-to-workspace 10'
+
+    alt-shift-cmd-1 = 'move-node-to-workspace 11'
+    alt-shift-cmd-2 = 'move-node-to-workspace 12'
+    alt-shift-cmd-3 = 'move-node-to-workspace 13'
+    alt-shift-cmd-4 = 'move-node-to-workspace 14'
+    alt-shift-cmd-5 = 'move-node-to-workspace 15'
+    alt-shift-cmd-6 = 'move-node-to-workspace 16'
+    alt-shift-cmd-7 = 'move-node-to-workspace 17'
+    alt-shift-cmd-8 = 'move-node-to-workspace 18'
+    alt-shift-cmd-9 = 'move-node-to-workspace 19'
+    alt-shift-cmd-0 = 'move-node-to-workspace 20'
+
+    # Cycle through non-empty workspaces on current monitor
+    alt-tab = 'exec-and-forget aerospace list-workspaces --monitor focused --empty no | aerospace workspace --stdin --wrap-around next'
+    alt-shift-tab = 'exec-and-forget aerospace list-workspaces --monitor focused --empty no | aerospace workspace --stdin --wrap-around prev'
+
+    # ======================================
+    # ========== MISC ======================
+    # ======================================
+    alt-shift-c = 'reload-config'
+    alt-shift-q = 'close'
+    alt-shift-e = 'exec-and-forget open -a Finder'
+    alt-r = 'mode resize'
+
+
+# ======================================
+# ========== KEYBINDINGS: RESIZE ========
+# ======================================
+[mode.resize.binding]
+    h = 'resize width -50'
+    j = 'resize height +50'
+    k = 'resize height -50'
+    l = 'resize width +50'
+    enter = 'mode main'
+    esc = 'mode main'
+
+
+# ======================================
+# ========== WINDOW RULES ===============
+# ======================================
+
+# Always start Finder in floating layout
+[[on-window-detected]]
+if.app-id = "com.apple.finder"
+run = 'layout floating'
+
+# NEW: Force Kitty windows to open in tiling layout
+# This helps remove the macOS title bar/header because tiled windows are borderless.
+[[on-window-detected]]
+if.app-id = "net.kovidgoyal.kitty"
+run = 'layout tiling'
+

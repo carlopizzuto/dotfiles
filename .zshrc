@@ -86,11 +86,6 @@ export NVM_DIR="$HOME/.nvm"
 [[ -f "$HOME/google-cloud-sdk/path.zsh.inc"       ]] && source "$HOME/google-cloud-sdk/path.zsh.inc"
 [[ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]] && source "$HOME/google-cloud-sdk/completion.zsh.inc"
 
-# ---- Pyenv -----------------------------------------------------------------
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-
 # ---------------------------------------------------------------------------
 # 7.  Aliases
 # ---------------------------------------------------------------------------
@@ -139,7 +134,7 @@ export CLASSPATH="$JUNIT_HOME/junit-4.13.2.jar:$JUNIT_HOME/hamcrest-core-1.3.jar
 # 10. Zsh plugins
 # ---------------------------------------------------------------------------
 source <(fzf --zsh)
-eval "$(zoxide init zsh --cmd cd)"
+eval "$(zoxide init zsh)"
 
 # Restore Tab to accept autosuggestion after plugins
 bindkey '^I' autosuggest-accept

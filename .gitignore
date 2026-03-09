@@ -2,3 +2,5 @@
 
 .zsh_plugins.zsh
 .zshrc.local
+nvim/lazy-lock.json
+tmux/plugins/

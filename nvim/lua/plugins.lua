@@ -142,28 +142,20 @@ return {
 	--  4.  LSP  +  COMPLETION +  AI
 	------------------------------------------------------------------
 	{
-		-- 4-a.  LSP core
-		"neovim/nvim-lspconfig",
-	},
-	{
 		"williamboman/mason.nvim",
 		build = ":MasonUpdate",
+		opts = {},
 	},
 	{
 		"williamboman/mason-lspconfig.nvim",
-		dependencies = { "neovim/nvim-lspconfig", "williamboman/mason.nvim" },
+		dependencies = { "williamboman/mason.nvim" },
 		opts = {
 			ensure_installed        = { "lua_ls", "pyright", "rust_analyzer", "clangd" },
 			automatic_installation  = true,
+			automatic_enable        = true,
 		},
 		config = function(_, opts)
-			require("mason").setup()
-			require("mason-lspconfig").setup(opts)
-
-			local lsp = require("lspconfig")
-
-			-- Lua
-			lsp.lua_ls.setup({
+			vim.lsp.config("lua_ls", {
 				settings = {
 					Lua = {
 						diagnostics = { globals = { "vim" } },
@@ -172,12 +164,7 @@ return {
 				},
 			})
 
-			-- Python / 
-			lsp.pyright.setup({})
-			-- C-C++ / 
-			lsp.clangd.setup({})
-			-- Rust /
-			lsp.rust_analyzer.setup({})
+			require("mason-lspconfig").setup(opts)
 		end,
 	},
 
