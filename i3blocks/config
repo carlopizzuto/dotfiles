@@ -1,0 +1,85 @@
+# i3blocks config file
+# version 1
+
+separator=false
+markup=pango
+separator_block_width=50
+color=#cdd6f4
+
+[click]
+full_text=AUDIO
+command=pavucontrol
+
+[separator]
+full_text=⟨
+color=#585b70
+
+# System monitoring blocks
+[cpu]
+command=echo "CPU: $(grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$3+$4+$5)} END {printf "%.1f%%", usage}')"
+interval=2
+color=#fab387
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[gpu]
+command=nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader,nounits | awk -F, '{printf "GPU: %s%% %s°C", $1, $2}'
+interval=2
+color=#f38ba8
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[memory]
+command=free -h | awk '/^Mem/ {printf "RAM: %s/%s", $3, $2}'
+interval=5
+color=#a6e3a1
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[disk]
+command=df -h / | awk 'NR==2 {printf "Disk: %s/%s (%s)", $3, $2, $5}'
+interval=30
+color=#89b4fa
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[network]
+command=ip route | grep default | awk '{print $5}' | head -1 | xargs -I {} cat /sys/class/net/{}/operstate | awk '{if($1=="up") print "NET: ✓"; else print "NET: ✗"}'
+interval=10
+color=#94e2d5
+
+[separator]
+full_text=⟨
+color=#585b70
+
+# Weather in Celsius
+[weather]
+command=curl -Ss 'https://wttr.in?0&T&Q&m' | cut -c 16- | head -2 | xargs echo
+interval=3600
+color=#A4C2F4
+
+[date]
+command=date '+%m-%d-%y'
+interval=60
+
+[separator]
+full_text=⟨
+color=#585b70
+
+# Update time every 5 seconds
+[time]
+command=date +%T
+interval=1
+
+[separator]
+full_text=⟨
+color=#585b70
+

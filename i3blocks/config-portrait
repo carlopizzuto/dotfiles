@@ -1,0 +1,29 @@
+# i3blocks configuration for DP-0 (Portrait Monitor)
+
+[cpu]
+command=top -bn1 | grep "Cpu(s)" | awk '{print "C: " $2}' | sed 's/%us,//'
+interval=2
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[gpu]
+command=nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null | awk '{print "G: " $1 "%"}' || echo "G: N/A"
+interval=2
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[memory]
+command=free -h | awk '/Mem:/{print "R: " $3 "/" $2}'
+interval=10
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[disk]
+command=df -h / | awk 'NR==2{print "D: " $3 "/" $2}'
+interval=30

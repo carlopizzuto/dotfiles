@@ -1,0 +1,52 @@
+# i3blocks configuration for DP-4 (Main Landscape Monitor)
+# Control and info focused
+
+# The top properties below are applied to every block, but can be overridden.
+full_text=
+align=center
+color=#f8f8f2
+separator=false
+separator_block_width=15
+
+[date]
+command=date '+%m-%d-%y'
+interval=60
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[time]
+command=date '+%I:%M %p'
+interval=5
+
+[separator]
+full_text=⟨
+
+[weather]
+command=curl -Ss 'https://wttr.in?0&T&Q&m' | cut -c 16- | head -2 | xargs echo || echo "Weather: N/A"
+interval=3600
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[sound]
+full_text=🔊
+command=pavucontrol
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[restart]
+full_text=⟲
+command=systemctl reboot
+
+[separator]
+full_text=⟨
+color=#585b70
+
+[shutdown]
+full_text=⏻
+command=systemctl poweroff
