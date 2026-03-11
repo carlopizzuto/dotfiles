@@ -4,3 +4,4 @@
 .zshrc.local
 nvim/lazy-lock.json
 tmux/plugins/
+sway/config.bak

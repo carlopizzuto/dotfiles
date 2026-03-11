@@ -7,10 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Overview
 
 Personal dotfiles repo managing configs across two machines:
-- **Arch Linux PC** (primary, i3wm) — AMD 7600X, RTX 4070 Super
+- **Arch Linux PC** (primary, sway/Wayland) — AMD 7600X, RTX 4070 Super
 - **MacBook** (macOS, Aerospace WM) — Apple M3 Pro
 
-Configs are symlinked from `~/.dotfiles/` into their expected locations (e.g., `~/.config/nvim`, `~/.config/kitty`, `~/.config/i3`).
+Configs are symlinked from `~/.dotfiles/` into their expected locations (e.g., `~/.config/nvim`, `~/.config/kitty`, `~/.config/sway`).
 
 ## Architecture
 
@@ -37,13 +37,14 @@ Standard lazy.nvim structure:
 
 ### Window Managers
 
-- `i3/config` — i3wm config for Arch Linux
+- `sway/config` — sway (Wayland) config for Arch Linux
+- `i3/config` — legacy i3wm config (migrated to sway)
 - `i3blocks/` — i3blocks status bar configs (`config-main`, `config-portrait` for multi-monitor)
 - `aerospace/aerospace.toml` — Aerospace WM config for macOS
 
 ### Polybar
 
-- `polybar/config.ini` — Polybar bar config (Gruvbox Dark theme, two bars: `main` for DP-2, `portrait` for DP-0)
+- `polybar/config.ini` — Polybar bar config (Gruvbox Dark theme, two bars: `main` for DP-3, `portrait` for DP-2)
 - `polybar/launch.sh` — launch script (kills existing instances, starts both bars)
 - `polybar/scripts/` — status modules (cpu, gpu, memory, temp, disk) and power menu
   - `power-menu.sh` — rofi dropdown (Sound, Bluetooth, Restart, Shutdown, Logout)
@@ -61,7 +62,7 @@ Configs are deployed via symlinks. Common pattern:
 ln -sf ~/.dotfiles/nvim ~/.config/nvim
 ln -sf ~/.dotfiles/kitty ~/.config/kitty
 ln -sf ~/.dotfiles/polybar ~/.config/polybar
-ln -sf ~/.dotfiles/i3/config ~/.config/i3/config
+ln -sf ~/.dotfiles/sway ~/.config/sway
 ln -sf ~/.dotfiles/tmux/tmux.conf ~/.config/tmux/tmux.conf
 ln -sf ~/.dotfiles/.zshrc ~/.zshrc
 ```
