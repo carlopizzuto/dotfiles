@@ -30,8 +30,8 @@ vim.keymap.set('n', '<leader>tt', "<CMD>belowright 20split | terminal<CR><C-w>J"
 vim.keymap.set('n', '<leader>R', "<CMD>Lazy sync<CR>", { desc = "Sync plugins with Lazy", silent = true })
 
 -- exit terminal mode & go to editor above
-vim.keymap.set('t', '<leader>,,', [[<C-\><C-n><C-w>k]], { desc = "Exit T-Mode + Focus Editor Above" })
+vim.keymap.set('t', '<Esc><Esc>', [[<C-\><C-n><C-w>k]], { desc = "Exit T-Mode + Focus Editor Above" })
 
-vim.keymap.set('n', '<leader>//', [[<C-w>ja]], { desc = "Focus Terminal Bellow" })
+vim.keymap.set('n', '<C-]>', [[<C-w>ja]], { desc = "Focus Terminal Below" })
 
 
