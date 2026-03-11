@@ -12,3 +12,13 @@ if [[ -d /opt/miniconda3 ]]; then
   fi
   unset __conda_setup
 fi
+
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
+# vapi
+export VAPI_INSTALL="$HOME/.vapi"
+export PATH="$VAPI_INSTALL/bin:$PATH"
+export MANPATH="$HOME/.vapi/share/man:$MANPATH"
