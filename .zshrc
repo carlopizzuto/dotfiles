@@ -20,6 +20,7 @@ path=(
   # toolchains you actually use
   $HOME/google-cloud-sdk/bin
   /usr/local/mysql/bin
+  /opt/cuda/bin
 
   # system fallbacks
   /usr/local/bin
@@ -102,6 +103,8 @@ alias grep='grep --color=auto'
 # -- directory shortcuts
 alias ..='cd ..'
 alias ...='cd ../..'
+# -- tmux
+alias tmux-cheat='less ~/.config/tmux/CHEATSHEET.md'
 
 # ---------------------------------------------------------------------------
 # 8.  Keybinds & Kitty clear
@@ -129,6 +132,8 @@ alias clear='__kitty_clear'
 # ---------------------------------------------------------------------------
 export JUNIT_HOME="$HOME/CS/JUNIT"
 export CLASSPATH="$JUNIT_HOME/junit-4.13.2.jar:$JUNIT_HOME/hamcrest-core-1.3.jar"
+export EDITOR='nvim'
+export GTK_THEME='Adwaita:dark'
 
 # ---------------------------------------------------------------------------
 # 10. Zsh plugins
