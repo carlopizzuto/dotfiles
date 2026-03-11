@@ -243,4 +243,16 @@ return {
 	--  5.  SUPPORT LIBS
 	------------------------------------------------------------------
 	{ "nvim-lua/plenary.nvim", lazy = true },
+	{
+		"folke/snacks.nvim",
+		opts = {
+			terminal = {
+				win = {
+					keys = {
+						term_normal = false,
+					},
+				},
+			},
+		},
+	},
 }
