@@ -171,6 +171,16 @@ return {
 	{
 		"github/copilot.vim",
 	},
+	{
+		"coder/claudecode.nvim",
+		config = true,
+		keys = {
+			{ "<leader>ac", "<cmd>ClaudeCode<cr>",       desc = "Toggle Claude Code" },
+			{ "<leader>af", "<cmd>ClaudeCodeFocus<cr>",   desc = "Focus Claude Code" },
+			{ "<leader>ar", "<cmd>ClaudeCode --resume<cr>", desc = "Resume Claude Chat" },
+			{ "<leader>as", "<cmd>ClaudeCodeSend<cr>",    desc = "Send to Claude", mode = "v" },
+		},
+	},
 
 	------------------------------------------------------------------
 	--  4-b. nvim-cmp 
