@@ -173,7 +173,12 @@ return {
 	},
 	{
 		"coder/claudecode.nvim",
-		config = true,
+		dependencies = { "folke/snacks.nvim" },
+		opts = {
+			terminal = {
+				provider = "snacks",
+			},
+		},
 		keys = {
 			{ "<leader>ac", "<cmd>ClaudeCode<cr>",       desc = "Toggle Claude Code" },
 			{ "<leader>af", "<cmd>ClaudeCodeFocus<cr>",   desc = "Focus Claude Code" },
