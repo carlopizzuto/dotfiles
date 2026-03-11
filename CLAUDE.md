@@ -41,6 +41,14 @@ Standard lazy.nvim structure:
 - `i3blocks/` — i3blocks status bar configs (`config-main`, `config-portrait` for multi-monitor)
 - `aerospace/aerospace.toml` — Aerospace WM config for macOS
 
+### Polybar
+
+- `polybar/config.ini` — Polybar bar config (Gruvbox Dark theme, two bars: `main` for DP-2, `portrait` for DP-0)
+- `polybar/launch.sh` — launch script (kills existing instances, starts both bars)
+- `polybar/scripts/` — status modules (cpu, gpu, memory, temp, disk) and power menu
+  - `power-menu.sh` — rofi dropdown (Sound, Bluetooth, Restart, Shutdown, Logout)
+  - `power-countdown.py` — GTK3 countdown popup (60s) for Restart/Shutdown/Logout with cancel support
+
 ### Terminal & Multiplexer
 
 - `kitty/kitty.conf` — Kitty terminal config (with `themes/` subdir). Includes a `map shift+enter` that sends the CSI u sequence (`\x1b[13;2u`) so Shift+Enter works inside tmux (tmux doesn't support the kitty keyboard protocol natively).
@@ -52,6 +60,7 @@ Configs are deployed via symlinks. Common pattern:
 ```bash
 ln -sf ~/.dotfiles/nvim ~/.config/nvim
 ln -sf ~/.dotfiles/kitty ~/.config/kitty
+ln -sf ~/.dotfiles/polybar ~/.config/polybar
 ln -sf ~/.dotfiles/i3/config ~/.config/i3/config
 ln -sf ~/.dotfiles/tmux/tmux.conf ~/.config/tmux/tmux.conf
 ln -sf ~/.dotfiles/.zshrc ~/.zshrc
