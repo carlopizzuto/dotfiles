@@ -41,6 +41,20 @@ class CountdownWindow(Gtk.Window):
             font-size: 14px;
             color: #a89984;
         }
+        .now-button {
+            background-color: #cc241d;
+            background-image: none;
+            color: #ebdbb2;
+            border: 1px solid #fb4934;
+            border-radius: 4px;
+            padding: 10px 32px;
+            font-size: 15px;
+            font-weight: bold;
+        }
+        .now-button:hover {
+            background-color: #fb4934;
+            background-image: none;
+        }
         .cancel-button {
             background-color: #3c3836;
             background-image: none;
@@ -88,17 +102,24 @@ class CountdownWindow(Gtk.Window):
         vbox.pack_start(self.timer_label, True, True, 0)
 
         # Hint text
-        hint = Gtk.Label(label="Press Escape or click Cancel to abort")
+        hint = Gtk.Label(label="Press Enter to do it now, Escape to cancel")
         hint.get_style_context().add_class("message-label")
         vbox.pack_start(hint, False, False, 0)
 
-        # Cancel button
+        # Buttons
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        btn_box.set_halign(Gtk.Align.CENTER)
+
+        now_btn = Gtk.Button(label=f"{action_name} Now")
+        now_btn.get_style_context().add_class("now-button")
+        now_btn.connect("clicked", lambda _: self.execute_action())
+        btn_box.pack_start(now_btn, False, False, 0)
+
         cancel_btn = Gtk.Button(label="Cancel")
         cancel_btn.get_style_context().add_class("cancel-button")
         cancel_btn.connect("clicked", lambda _: Gtk.main_quit())
-        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        btn_box.set_halign(Gtk.Align.CENTER)
         btn_box.pack_start(cancel_btn, False, False, 0)
+
         vbox.pack_start(btn_box, False, False, 5)
 
         self.add(vbox)
@@ -121,6 +142,8 @@ class CountdownWindow(Gtk.Window):
     def on_key_press(self, _widget, event):
         if event.keyval == Gdk.KEY_Escape:
             Gtk.main_quit()
+        elif event.keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+            self.execute_action()
 
     def execute_action(self):
         subprocess.Popen(self.command, shell=True)
