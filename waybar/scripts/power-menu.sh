@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-# Power menu for polybar — GTK popup with countdown for power actions.
+# Power menu for waybar — GTK popup with countdown for power actions.
 # Format: Label|Command|countdown (yes/no)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -16,7 +16,7 @@ Sound Settings|pavucontrol|no
 Bluetooth Settings|blueman-manager|no
 Restart|systemctl reboot|yes
 Shutdown|systemctl poweroff|yes
-Logout|i3-msg exit|yes
+Logout|swaymsg exit|yes
 EOF
 )
 

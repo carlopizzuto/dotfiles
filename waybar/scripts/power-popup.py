@@ -59,7 +59,7 @@ class PopupMenu(Gtk.Window):
         #popup-frame {
             background-color: #282828;
             border: 1px solid #504945;
-            padding: 4px 0;
+            padding: 8px 0;
         }
         row {
             background-color: #282828;
@@ -70,8 +70,8 @@ class PopupMenu(Gtk.Window):
         }
         row label {
             color: #ebdbb2;
-            padding: 6px 12px;
-            font: 12px "Iosevka Nerd Font";
+            padding: 10px 24px;
+            font: 16px "Iosevka Nerd Font";
         }
         row:hover label {
             color: #fabd2f;

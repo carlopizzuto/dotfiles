@@ -1,0 +1,149 @@
+[
+  // ================================
+  // Main bar (mirrors [bar/main])
+  // ================================
+  {
+    "output": "DP-3",
+    "layer": "top",
+    "position": "top",
+    "height": 34,
+    "fixed-center": true,
+    "spacing": 6,
+
+    "modules-left": [
+      "sway/workspaces"
+    ],
+    "modules-center": [
+      "clock#date",
+      "custom/interpunct",
+      "clock#time"
+    ],
+    "modules-right": [
+      "network",
+      "custom/sep",
+      "custom/cpu",
+      "custom/sep",
+      "custom/memory",
+      "custom/sep",
+      "custom/gpu",
+      "custom/sep",
+      "disk",
+      "custom/sep",
+      "custom/power"
+    ],
+
+    "sway/workspaces": {
+      "format": "{name}",
+      "all-outputs": false,
+      "disable-scroll": true
+    },
+
+    "clock#date": {
+      "interval": 1,
+      "format": "{:%A %b. %d, %Y}"
+    },
+
+    "clock#time": {
+      "interval": 1,
+      "format": "{:%H:%M:%S}"
+    },
+
+    "network": {
+      "interval": 3,
+      "format-ethernet": "{ifname} {ipaddr}",
+      "format-wifi": "{ifname} {ipaddr}",
+      "format-disconnected": "disconnected"
+    },
+
+    "custom/cpu": {
+      "exec": "~/.config/waybar/scripts/cpu.sh",
+      "interval": 2
+    },
+
+    "custom/memory": {
+      "exec": "~/.config/waybar/scripts/memory.sh",
+      "interval": 2
+    },
+
+    "custom/gpu": {
+      "exec": "~/.config/waybar/scripts/gpu.sh",
+      "interval": 2
+    },
+
+    "disk": {
+      "interval": 30,
+      "path": "/",
+      "format": "D: {used}/{total}"
+    },
+
+    "custom/sep": {
+      "format": "|"
+    },
+
+    "custom/interpunct": {
+      "format": "·"
+    },
+
+    "custom/power": {
+      "format": "",
+      "on-click": "~/.config/waybar/scripts/power-menu.sh"
+    }
+  },
+
+  // ================================
+  // Portrait bar (mirrors [bar/portrait])
+  // ================================
+  {
+    "output": "DP-2",
+    "layer": "top",
+    "position": "top",
+    "height": 34,
+    "fixed-center": true,
+    "spacing": 6,
+
+    "modules-left": [
+      "sway/workspaces"
+    ],
+    "modules-center": [
+      "clock#time"
+    ],
+    "modules-right": [
+      "custom/cpu-simple",
+      "custom/sep",
+      "custom/gpu-simple",
+      "custom/sep",
+      "custom/memory-simple"
+    ],
+
+    "sway/workspaces": {
+      "format": "{name}",
+      "all-outputs": false,
+      "disable-scroll": true
+    },
+
+    "clock#time": {
+      "interval": 1,
+      "format": "{:%H:%M:%S}"
+    },
+
+    "custom/cpu-simple": {
+      "exec": "~/.config/waybar/scripts/cpu-simple.sh",
+      "interval": 2
+    },
+
+    "custom/gpu-simple": {
+      "exec": "~/.config/waybar/scripts/gpu-simple.sh",
+      "interval": 2
+    },
+
+    "custom/memory-simple": {
+      "exec": "~/.config/waybar/scripts/memory-simple.sh",
+      "interval": 2
+    },
+
+    "custom/sep": {
+      "format": "|"
+    }
+  }
+]
+
