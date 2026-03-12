@@ -34,4 +34,8 @@ vim.keymap.set('t', '<C-\\>', [[<C-\><C-n><C-w>k]], { desc = "Exit T-Mode + Focu
 
 vim.keymap.set('n', '<C-]>', [[<C-w>ja]], { desc = "Focus Terminal Below" })
 
-
+-- resize panes
+vim.keymap.set('n', '<C-Left>', '5<C-w><', { desc = "Decrease Width", silent = true })
+vim.keymap.set('n', '<C-Right>', '5<C-w>>', { desc = "Increase Width", silent = true })
+vim.keymap.set('n', '<C-Up>', '3<C-w>+', { desc = "Increase Height", silent = true })
+vim.keymap.set('n', '<C-Down>', '3<C-w>-', { desc = "Decrease Height", silent = true })
