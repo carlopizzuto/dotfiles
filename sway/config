@@ -39,6 +39,9 @@ output DP-2 mode 1080x1920 transform 270 scale 1 position 0 -275 bg ~/.config/WP
 # ========== STARTUP EXECs =============
 # ======================================
 
+# Re-enable DP-2 (disabled at kernel level via video=DP-2:d for Ly single-monitor)
+exec echo on | sudo tee /sys/class/drm/card2-DP-2/status
+
 # Export Wayland env vars to systemd (needed for portals, file dialogs, etc.)
 exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway GTK_THEME
 
