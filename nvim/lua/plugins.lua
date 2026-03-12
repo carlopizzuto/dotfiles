@@ -35,6 +35,9 @@ return {
 					lualine_y = { "progress" },
 					lualine_z = { "location" },
 				},
+				tabline = {
+					lualine_a = { { "tabs", mode = 2 } },
+				},
 			})
 		end,
 	},
@@ -176,14 +179,18 @@ return {
 		dependencies = { "folke/snacks.nvim" },
 		opts = {
 			terminal = {
-				provider = "snacks",
+				provider = require("claudecode_provider"),
 			},
 		},
 		keys = {
-			{ "<leader>ac", "<cmd>ClaudeCode<cr>",       desc = "Toggle Claude Code" },
-			{ "<leader>af", "<cmd>ClaudeCodeFocus<cr>",   desc = "Focus Claude Code" },
+			{ "<leader>ac", "<cmd>ClaudeCode<cr>",         desc = "Toggle Claude Code" },
+			{ "<leader>an", function()
+				vim.cmd("tabnew")
+				vim.cmd("ClaudeCode")
+			end,                                           desc = "New Claude session" },
+			{ "<leader>af", "<cmd>ClaudeCodeFocus<cr>",    desc = "Focus Claude Code" },
 			{ "<leader>ar", "<cmd>ClaudeCode --resume<cr>", desc = "Resume Claude Chat" },
-			{ "<leader>as", "<cmd>ClaudeCodeSend<cr>",    desc = "Send to Claude", mode = "v" },
+			{ "<leader>as", "<cmd>ClaudeCodeSend<cr>",     desc = "Send to Claude", mode = "v" },
 		},
 	},
 
