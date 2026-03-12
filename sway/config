@@ -61,6 +61,9 @@ exec_always killall -q waybar; sleep 1 && waybar
 # Notifications
 exec_always killall -q mako; sleep 0.2 && mako
 
+# Volume OSD
+exec_always ~/.config/sway/scripts/volume-osd.py
+
 # Clipboard history
 exec_always killall -q wl-paste; sleep 0.2 && wl-paste --watch cliphist store
 
@@ -299,7 +302,7 @@ bindsym $mod+r mode "resize"
 
 bindsym XF86AudioRaiseVolume exec wpctl set-volume @DEFAULT_SINK@ .05+ --limit 1.0
 bindsym XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_SINK@ .05-
-bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute 0 toggle
+bindsym XF86AudioMute exec wpctl set-mute @DEFAULT_SINK@ toggle
 bindsym XF86AudioPlay exec playerctl play-pause
 bindsym XF86AudioNext exec playerctl next
 bindsym XF86AudioPrev exec playerctl previous
