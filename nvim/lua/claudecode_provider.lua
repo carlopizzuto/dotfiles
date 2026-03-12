@@ -143,7 +143,7 @@ local function build_opts(config, env_table, should_focus, tab_id)
 			width = config.split_width_percentage,
 			height = 0,
 			relative = "editor",
-			wo = { winfixwidth = true },
+			wo = { winfixwidth = true, wrap = true },
 			keys = {
 				term_normal = false,
 				claude_new_line = {
@@ -170,6 +170,14 @@ local function create_terminal(cmd_string, env_table, config, should_focus, tab_
 	end
 
 	State.terminals[tab_id] = { instance = term, bufnr = term.buf }
+
+	-- Disable horizontal trackpad scrolling inside the Claude terminal
+	for _, mode in ipairs({ "t", "n" }) do
+		vim.api.nvim_buf_set_keymap(term.buf, mode, "<ScrollWheelLeft>", "", { noremap = true, silent = true })
+		vim.api.nvim_buf_set_keymap(term.buf, mode, "<ScrollWheelRight>", "", { noremap = true, silent = true })
+		vim.api.nvim_buf_set_keymap(term.buf, mode, "<S-ScrollWheelLeft>", "", { noremap = true, silent = true })
+		vim.api.nvim_buf_set_keymap(term.buf, mode, "<S-ScrollWheelRight>", "", { noremap = true, silent = true })
+	end
 
 	if config.auto_close then
 		term:on("TermClose", function()
