@@ -42,12 +42,13 @@ Standard lazy.nvim structure:
 - `i3blocks/` — i3blocks status bar configs (`config-main`, `config-portrait` for multi-monitor)
 - `aerospace/aerospace.toml` — Aerospace WM config for macOS
 
-### Polybar
+### Waybar
 
-- `polybar/config.ini` — Polybar bar config (Gruvbox Dark theme, two bars: `main` for DP-3, `portrait` for DP-2)
-- `polybar/launch.sh` — launch script (kills existing instances, starts both bars)
-- `polybar/scripts/` — status modules (cpu, gpu, memory, temp, disk) and power menu
-  - `power-menu.sh` — rofi dropdown (Sound, Bluetooth, Restart, Shutdown, Logout)
+- `waybar/config.jsonc` — Waybar config (Gruvbox Dark theme, two bars: `main` for DP-3, `portrait` for DP-2)
+- `waybar/style.css` — Waybar styling (Gruvbox Dark colors, per-module accents)
+- `waybar/scripts/` — status modules (cpu, gpu, memory, temp, disk) and power menu
+  - `power-menu.sh` — GTK popup menu (Sound, Bluetooth, Restart, Shutdown, Logout)
+  - `power-popup.py` — GTK3 layer-shell popup with transparent backdrop for click-outside dismiss
   - `power-countdown.py` — GTK3 countdown popup (60s) for Restart/Shutdown/Logout with cancel support
 
 ### Terminal & Multiplexer
@@ -61,7 +62,7 @@ Configs are deployed via symlinks. Common pattern:
 ```bash
 ln -sf ~/.dotfiles/nvim ~/.config/nvim
 ln -sf ~/.dotfiles/kitty ~/.config/kitty
-ln -sf ~/.dotfiles/polybar ~/.config/polybar
+ln -sf ~/.dotfiles/waybar ~/.config/waybar
 ln -sf ~/.dotfiles/sway ~/.config/sway
 ln -sf ~/.dotfiles/tmux/tmux.conf ~/.config/tmux/tmux.conf
 ln -sf ~/.dotfiles/.zshrc ~/.zshrc
