@@ -1,10 +1,13 @@
 -- Multi-session terminal provider for claudecode.nvim
 -- Each Neovim tab can hold multiple Claude Code sessions. Only the
 -- active session is visible in the split; others run in the background.
--- Patches claudecode.nvim's broadcast so MCP events are routed to the
--- current tab's active session client.
+-- Sessions persist across Neovim restarts by discovering conversations
+-- from Claude Code's filesystem and resuming via --resume.
 
 local M = {}
+
+local uv = vim.uv or vim.loop
+local PERSISTENCE_FILE = vim.fn.stdpath("data") .. "/claude_sessions.json"
 
 local State = {
 	tabs = {},       -- tab_id -> { sessions = [...], active = number }
@@ -13,6 +16,146 @@ local State = {
 	next_count = 1,  -- unique Snacks terminal count
 	patched = { on_connect = false, on_disconnect = false, broadcast = false },
 }
+
+----------------------------------------------------------------
+--  Project directory helpers
+----------------------------------------------------------------
+
+local function get_project_dir()
+	local cwd = vim.fn.getcwd()
+	local encoded = cwd:gsub("[/.]", "-")
+	return vim.fn.expand("~/.claude/projects/" .. encoded)
+end
+
+----------------------------------------------------------------
+--  Persistence (name overrides for conversation IDs)
+----------------------------------------------------------------
+
+local function load_all_persisted()
+	local f = io.open(PERSISTENCE_FILE, "r")
+	if not f then return {} end
+	local content = f:read("*a")
+	f:close()
+	if not content or content == "" then return {} end
+	local ok, data = pcall(vim.json.decode, content)
+	return ok and type(data) == "table" and data or {}
+end
+
+local function save_all_persisted(data)
+	local f = io.open(PERSISTENCE_FILE, "w")
+	if not f then return end
+	f:write(vim.json.encode(data))
+	f:close()
+end
+
+--- Returns { [conversation_id] = name } for current cwd
+local function load_name_map()
+	local all = load_all_persisted()
+	return all[vim.fn.getcwd()] or {}
+end
+
+local function save_name_map(name_map)
+	local all = load_all_persisted()
+	all[vim.fn.getcwd()] = name_map
+	save_all_persisted(all)
+end
+
+--- Persist running sessions' names into the name map
+local function persist_names()
+	local name_map = load_name_map()
+	for _, tab in pairs(State.tabs) do
+		for _, s in ipairs(tab.sessions) do
+			if s.session_id and s.name then
+				name_map[s.session_id] = s.name
+			end
+		end
+	end
+	save_name_map(name_map)
+end
+
+----------------------------------------------------------------
+--  Filesystem discovery
+----------------------------------------------------------------
+
+local function get_first_user_message(jsonl_path)
+	local f = io.open(jsonl_path, "r")
+	if not f then return nil end
+	for line in f:lines() do
+		local ok, data = pcall(vim.json.decode, line)
+		if ok and data.type == "user" and data.message then
+			f:close()
+			local content = data.message.content
+			if type(content) == "string" then
+				local first_line = content:match("^[^\n]*")
+				if first_line then
+					first_line = vim.trim(first_line)
+					if #first_line > 60 then
+						return first_line:sub(1, 60) .. "..."
+					end
+					return first_line
+				end
+			end
+			return nil
+		end
+	end
+	f:close()
+	return nil
+end
+
+--- Scan Claude's project dir for .jsonl conversation files.
+--- Returns [{ session_id, name, mtime }] sorted newest-first.
+local function discover_conversations()
+	local project_dir = get_project_dir()
+	local files = vim.fn.glob(project_dir .. "/*.jsonl", false, true)
+	if #files == 0 then return {} end
+
+	local name_map = load_name_map()
+	local conversations = {}
+
+	for _, filepath in ipairs(files) do
+		local uuid = vim.fn.fnamemodify(filepath, ":t:r")
+		local mtime = vim.fn.getftime(filepath)
+		local name = name_map[uuid]
+		if not name then
+			name = get_first_user_message(filepath) or ("Session " .. uuid:sub(1, 8))
+		end
+		table.insert(conversations, {
+			session_id = uuid,
+			name = name,
+			mtime = mtime,
+		})
+	end
+
+	table.sort(conversations, function(a, b) return a.mtime > b.mtime end)
+	return conversations
+end
+
+----------------------------------------------------------------
+--  Session ID capture (for new sessions — polls for new .jsonl)
+----------------------------------------------------------------
+
+local function start_session_id_capture(session, existing_files)
+	local project_dir = get_project_dir()
+	local timer = uv.new_timer()
+	local attempts = 0
+	timer:start(2000, 2000, vim.schedule_wrap(function()
+		attempts = attempts + 1
+		if attempts > 30 or not session.bufnr or not vim.api.nvim_buf_is_valid(session.bufnr) then
+			timer:stop()
+			timer:close()
+			return
+		end
+		for _, f in ipairs(vim.fn.glob(project_dir .. "/*.jsonl", false, true)) do
+			if not existing_files[f] then
+				session.session_id = vim.fn.fnamemodify(f, ":t:r")
+				persist_names()
+				timer:stop()
+				timer:close()
+				return
+			end
+		end
+	end))
+end
 
 ----------------------------------------------------------------
 --  Access claudecode.nvim internals
@@ -92,12 +235,21 @@ local function remove_session_by_buf(tab_id, bufnr)
 	end
 end
 
+local function running_session_ids()
+	local ids = {}
+	for _, tab in pairs(State.tabs) do
+		for _, s in ipairs(tab.sessions) do
+			if s.session_id then ids[s.session_id] = true end
+		end
+	end
+	return ids
+end
+
 ----------------------------------------------------------------
 --  Monkey-patches (applied once, route MCP events per-tab)
 ----------------------------------------------------------------
 
 local function ensure_patches()
-	-- on_connect: track which client belongs to which tab's active session
 	if not State.patched.on_connect then
 		local tcp = get_tcp_server()
 		if tcp then
@@ -111,7 +263,7 @@ local function ensure_patches()
 					end
 					if not tcp_set[client.id] then
 						return
-					end -- ghost client
+					end
 					local tab_id = State.connecting
 					if tab_id then
 						local s = active_session(tab_id)
@@ -126,7 +278,6 @@ local function ensure_patches()
 		end
 	end
 
-	-- on_disconnect: find and clear the session's client mapping
 	if not State.patched.on_disconnect then
 		local tcp = get_tcp_server()
 		if tcp then
@@ -146,7 +297,6 @@ local function ensure_patches()
 		end
 	end
 
-	-- broadcast: scope events to current tab's active session client
 	if not State.patched.broadcast then
 		local server = get_root_server()
 		if server and server.broadcast then
@@ -205,24 +355,50 @@ local function build_opts(config, env_table, should_focus, count)
 	}
 end
 
-local function create_session(tab_id, cmd_string, env_table, config, should_focus, name)
+local function create_session(tab_id, cmd_string, env_table, config, should_focus, name, resume_id)
 	local tab = get_or_create_tab(tab_id)
 	local count = State.next_count
 	State.next_count = State.next_count + 1
 
 	State.connecting = tab_id
 
+	-- Snapshot existing .jsonl files BEFORE opening terminal (for new sessions)
+	local existing_files = nil
+	local session_id = nil
+
+	if resume_id then
+		session_id = resume_id
+		cmd_string = cmd_string .. " --resume " .. session_id
+	else
+		-- New session: snapshot files so we can detect the new .jsonl later
+		existing_files = {}
+		for _, f in ipairs(vim.fn.glob(get_project_dir() .. "/*.jsonl", false, true)) do
+			existing_files[f] = true
+		end
+	end
+
+	local session_name = name or ("Session " .. (#tab.sessions + 1))
+
+	vim.notify(string.format("[claude] create_session: cmd=%s", cmd_string), vim.log.levels.DEBUG)
+
 	local opts = build_opts(config, env_table, should_focus, count)
 	local ok, term = pcall(Snacks.terminal.open, cmd_string, opts)
-	if not ok or not term or not term:buf_valid() then
+	if not ok or not term then
+		vim.notify(string.format("[claude] create_session: Snacks.terminal.open failed (ok=%s)", tostring(ok)), vim.log.levels.ERROR)
 		return
 	end
+	if not term:buf_valid() then
+		vim.notify("[claude] create_session: terminal buffer not valid after open", vim.log.levels.ERROR)
+		return
+	end
+	vim.notify(string.format("[claude] create_session: terminal opened, bufnr=%d", term.buf), vim.log.levels.DEBUG)
 
 	local session = {
 		instance = term,
 		bufnr = term.buf,
 		client_id = nil,
-		name = name or ("Session " .. #tab.sessions + 1),
+		name = session_name,
+		session_id = session_id, -- nil for new sessions until captured
 	}
 	table.insert(tab.sessions, session)
 	tab.active = #tab.sessions
@@ -248,6 +424,13 @@ local function create_session(tab_id, cmd_string, env_table, config, should_focu
 	term:on("BufWipeout", function()
 		remove_session_by_buf(tab_id, term.buf)
 	end, { buf = true })
+
+	-- For new sessions, poll to discover the conversation ID
+	if existing_files then
+		start_session_id_capture(session, existing_files)
+	else
+		persist_names()
+	end
 end
 
 ----------------------------------------------------------------
@@ -276,9 +459,16 @@ end
 ----------------------------------------------------------------
 
 function M.setup(_config)
+	local group = vim.api.nvim_create_augroup("ClaudeCodeProvider", { clear = true })
+
 	vim.api.nvim_create_autocmd("TabClosed", {
-		group = vim.api.nvim_create_augroup("ClaudeCodeProvider", { clear = true }),
+		group = group,
 		callback = cleanup_closed_tabs,
+	})
+
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		group = group,
+		callback = persist_names,
 	})
 end
 
@@ -287,6 +477,16 @@ function M.open(cmd_string, env_table, config, do_focus)
 	State.cmd_cache = { cmd = cmd_string, env = env_table, config = config }
 	local should_focus = do_focus ~= false
 	local tab_id = vim.api.nvim_get_current_tabpage()
+
+	-- If a resume was requested before cmd_cache was ready, handle it now
+	local pending = State.pending_resume
+	if pending then
+		State.pending_resume = nil
+		vim.notify(string.format("[claude] open: fulfilling pending resume id=%s", pending.id), vim.log.levels.DEBUG)
+		create_session(tab_id, cmd_string, env_table, config, should_focus, pending.name, pending.id)
+		return
+	end
+
 	local s = active_session(tab_id)
 
 	if s and session_is_valid(s) then
@@ -339,7 +539,6 @@ function M.focus_toggle(cmd_string, env_table, config)
 		return
 	end
 
-	-- Visible: hide if focused, focus if not
 	if vim.api.nvim_get_current_win() == s.instance.win then
 		s.instance:toggle()
 	else
@@ -377,13 +576,37 @@ function M.new_session()
 		local tab_id = vim.api.nvim_get_current_tabpage()
 		local s = active_session(tab_id)
 
-		-- Hide current session (keep it running in background)
 		if s and session_is_visible(s) then
 			s.instance:toggle()
 		end
 
 		create_session(tab_id, cache.cmd, cache.env, cache.config, true, name)
 	end)
+end
+
+function M.resume_session(session_id, name)
+	vim.notify(string.format("[claude] resume_session: id=%s name=%s", session_id or "nil", name or "nil"), vim.log.levels.DEBUG)
+	local cache = State.cmd_cache
+	if not cache then
+		-- cmd_cache not populated yet — stash the resume request and
+		-- trigger ClaudeCode, which calls provider.open() and gives us
+		-- the cmd/env/config we need. open() will pick up pending_resume.
+		vim.notify("[claude] resume_session: bootstrapping via ClaudeCode", vim.log.levels.DEBUG)
+		State.pending_resume = { id = session_id, name = name }
+		vim.cmd("ClaudeCode")
+		return
+	end
+
+	vim.notify(string.format("[claude] resume_session: cmd_cache.cmd=%s", cache.cmd or "nil"), vim.log.levels.DEBUG)
+	ensure_patches()
+	local tab_id = vim.api.nvim_get_current_tabpage()
+	local s = active_session(tab_id)
+
+	if s and session_is_visible(s) then
+		s.instance:toggle()
+	end
+
+	create_session(tab_id, cache.cmd, cache.env, cache.config, true, name, session_id)
 end
 
 function M.cycle_session()
@@ -427,7 +650,49 @@ end
 function M.list_sessions()
 	local tab_id = vim.api.nvim_get_current_tabpage()
 	local tab = get_tab(tab_id)
-	if not tab or #tab.sessions == 0 then
+	local running = tab and tab.sessions or {}
+	local conversations = discover_conversations()
+	local running_ids = running_session_ids()
+
+	-- Build unified entry list
+	local entries = {}
+
+	-- Running sessions first
+	for i, s in ipairs(running) do
+		local marker = (tab and i == tab.active) and " (active)" or ""
+		table.insert(entries, {
+			display = string.format("%s [running]%s", s.name, marker),
+			type = "running",
+			index = i,
+			ordinal = s.name .. " running",
+			session_id = s.session_id,
+			name = s.name,
+		})
+	end
+
+	-- Discovered conversations (skip any already running)
+	for _, c in ipairs(conversations) do
+		if not running_ids[c.session_id] then
+			local age = os.difftime(os.time(), c.mtime)
+			local age_str
+			if age < 3600 then
+				age_str = string.format("%dm ago", math.floor(age / 60))
+			elseif age < 86400 then
+				age_str = string.format("%dh ago", math.floor(age / 3600))
+			else
+				age_str = string.format("%dd ago", math.floor(age / 86400))
+			end
+			table.insert(entries, {
+				display = string.format("%s [saved · %s]", c.name, age_str),
+				type = "saved",
+				ordinal = c.name .. " saved",
+				session_id = c.session_id,
+				name = c.name,
+			})
+		end
+	end
+
+	if #entries == 0 then
 		vim.notify("No Claude sessions", vim.log.levels.INFO)
 		return
 	end
@@ -438,30 +703,9 @@ function M.list_sessions()
 	local actions = require("telescope.actions")
 	local action_state = require("telescope.actions.state")
 
-	local entries = {}
-	for i, s in ipairs(tab.sessions) do
-		local status = session_is_valid(s) and "running" or "dead"
-		local marker = i == tab.active and " (active)" or ""
-		table.insert(entries, {
-			display = string.format("%d: %s [%s]%s", i, s.name, status, marker),
-			index = i,
-			ordinal = s.name,
-		})
-	end
-
-	local function make_finder(t)
-		local items = {}
-		for i, s in ipairs(t.sessions) do
-			local status = session_is_valid(s) and "running" or "dead"
-			local marker = i == t.active and " (active)" or ""
-			table.insert(items, {
-				display = string.format("%d: %s [%s]%s", i, s.name, status, marker),
-				index = i,
-				ordinal = s.name,
-			})
-		end
+	local function make_finder()
 		return finders.new_table({
-			results = items,
+			results = entries,
 			entry_maker = function(entry)
 				return { value = entry, display = entry.display, ordinal = entry.ordinal }
 			end,
@@ -469,15 +713,20 @@ function M.list_sessions()
 	end
 
 	pickers.new({}, {
-		prompt_title = "Claude Sessions (CR: switch, C-r: rename, q: close)",
-		finder = make_finder(tab),
+		prompt_title = "Claude Sessions (CR: switch/resume, C-r: rename, q: close)",
+		finder = make_finder(),
 		sorter = conf.generic_sorter({}),
 		attach_mappings = function(prompt_bufnr, map)
 			actions.select_default:replace(function()
 				local selection = action_state.get_selected_entry()
 				actions.close(prompt_bufnr)
-				if selection then
-					M.goto_session(selection.value.index)
+				if not selection then return end
+
+				local entry = selection.value
+				if entry.type == "running" then
+					M.goto_session(entry.index)
+				elseif entry.type == "saved" then
+					M.resume_session(entry.session_id, entry.name)
 				end
 			end)
 
@@ -488,16 +737,23 @@ function M.list_sessions()
 			map({ "i", "n" }, "<C-r>", function()
 				local selection = action_state.get_selected_entry()
 				if not selection then return end
-				local idx = selection.value.index
-				local s = tab.sessions[idx]
-				if not s then return end
+				local entry = selection.value
 
 				actions.close(prompt_bufnr)
-				vim.ui.input({ prompt = "Rename session: ", default = s.name }, function(input)
+				vim.ui.input({ prompt = "Rename session: ", default = entry.name }, function(input)
 					if input and input ~= "" then
-						s.name = input
+						if entry.type == "running" then
+							local s = tab and tab.sessions[entry.index]
+							if s then s.name = input end
+						end
+						-- Persist the name for this conversation ID
+						local name_map = load_name_map()
+						if entry.session_id then
+							name_map[entry.session_id] = input
+						end
+						save_name_map(name_map)
+						persist_names()
 					end
-					-- Reopen the picker after rename
 					vim.schedule(function() M.list_sessions() end)
 				end)
 			end)
@@ -518,6 +774,7 @@ function M.rename_session()
 	vim.ui.input({ prompt = "Rename session: ", default = s.name }, function(input)
 		if input and input ~= "" then
 			s.name = input
+			persist_names()
 		end
 	end)
 end
