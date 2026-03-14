@@ -69,16 +69,42 @@ vim.keymap.set('t', '<C-\\>', [[<C-\><C-n><C-w>k]], { desc = "Exit T-Mode + Focu
 
 vim.keymap.set('n', '<C-]>', [[<C-w>ja]], { desc = "Focus Terminal Below" })
 
--- restart nvim (requires tmux)
+-- restart nvim preserving session (requires tmux)
 vim.keymap.set('n', '<leader>rr', function()
-   local file = vim.fn.expand('%:p')
-   local row = vim.api.nvim_win_get_cursor(0)[1]
-   local cmd = 'nvim'
-   if file ~= '' then
-      cmd = string.format('nvim +%d %s', row, vim.fn.shellescape(file))
+   local had_neotree = false
+   -- close Neo-tree and terminal buffers (they can't be serialized)
+   for _, win in ipairs(vim.api.nvim_list_wins()) do
+      local buf = vim.api.nvim_win_get_buf(win)
+      local ft = vim.bo[buf].filetype
+      local bt = vim.bo[buf].buftype
+      if ft == 'neo-tree' then
+         had_neotree = true
+         vim.api.nvim_win_close(win, true)
+      elseif bt == 'terminal' then
+         vim.api.nvim_win_close(win, true)
+      end
    end
+   -- wipe leftover terminal buffers
+   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.bo[buf].buftype == 'terminal' and vim.api.nvim_buf_is_valid(buf) then
+         vim.api.nvim_buf_delete(buf, { force = true })
+      end
+   end
+
+   local session_file = vim.fn.stdpath('state') .. '/restart_session.vim'
+   vim.cmd('mksession! ' .. vim.fn.fnameescape(session_file))
+
+   -- after restore: reopen Neo-tree if it was open
+   local post_cmds = 'silent! call delete("' .. session_file:gsub('"', '\\"') .. '")'
+   if had_neotree then
+      post_cmds = post_cmds .. ' | Neotree show'
+   end
+
+   local cmd = string.format('nvim -S %s -c %s',
+      vim.fn.shellescape(session_file),
+      vim.fn.shellescape(post_cmds))
    vim.fn.system({ 'tmux', 'respawn-pane', '-k', cmd })
-end, { desc = "Restart Neovim (tmux)" })
+end, { desc = "Restart Neovim (tmux, preserve session)" })
 
 -- resize panes
 vim.keymap.set('n', '<C-Left>', '5<C-w><', { desc = "Decrease Width", silent = true })
