@@ -1,14 +1,16 @@
 -- Multi-session terminal provider for claudecode.nvim
--- Each Neovim tab gets its own independent Claude Code session.
--- Patches claudecode.nvim's broadcast so MCP events (file mentions,
--- diffs, selections) are routed only to the current tab's client.
+-- Each Neovim tab can hold multiple Claude Code sessions. Only the
+-- active session is visible in the split; others run in the background.
+-- Patches claudecode.nvim's broadcast so MCP events are routed to the
+-- current tab's active session client.
 
 local M = {}
 
 local State = {
-	terminals = {}, -- tab_id -> { instance: snacks.win, bufnr: number }
-	clients = {}, -- tab_id -> client_id
-	connecting = nil, -- tab_id awaiting connection
+	tabs = {},       -- tab_id -> { sessions = [...], active = number }
+	cmd_cache = nil, -- { cmd, env, config } from last open() call
+	connecting = nil,-- tab_id awaiting connection
+	next_count = 1,  -- unique Snacks terminal count
 	patched = { on_connect = false, on_disconnect = false, broadcast = false },
 }
 
@@ -36,21 +38,57 @@ local function get_tcp_client_ids()
 end
 
 ----------------------------------------------------------------
---  Terminal helpers
+--  Tab / session helpers
 ----------------------------------------------------------------
 
-local function term_is_valid(t)
-	return t and t.instance and t.bufnr and vim.api.nvim_buf_is_valid(t.bufnr)
+local function get_tab(tab_id)
+	return State.tabs[tab_id]
 end
 
-local function term_is_visible(t)
-	return t and t.instance and t.instance.win and vim.api.nvim_win_is_valid(t.instance.win)
+local function get_or_create_tab(tab_id)
+	if not State.tabs[tab_id] then
+		State.tabs[tab_id] = { sessions = {}, active = 0 }
+	end
+	return State.tabs[tab_id]
 end
 
-local function term_focus(t)
-	if t.instance.win and vim.api.nvim_win_is_valid(t.instance.win) then
-		vim.api.nvim_set_current_win(t.instance.win)
+local function active_session(tab_id)
+	local tab = get_tab(tab_id)
+	if tab and tab.active > 0 and tab.active <= #tab.sessions then
+		return tab.sessions[tab.active]
+	end
+end
+
+local function session_is_valid(s)
+	return s and s.instance and s.bufnr and vim.api.nvim_buf_is_valid(s.bufnr)
+end
+
+local function session_is_visible(s)
+	return s and s.instance and s.instance.win and vim.api.nvim_win_is_valid(s.instance.win)
+end
+
+local function session_focus(s)
+	if s.instance.win and vim.api.nvim_win_is_valid(s.instance.win) then
+		vim.api.nvim_set_current_win(s.instance.win)
 		vim.cmd("startinsert")
+	end
+end
+
+local function remove_session_by_buf(tab_id, bufnr)
+	local tab = get_tab(tab_id)
+	if not tab then return end
+	for i, s in ipairs(tab.sessions) do
+		if s.bufnr == bufnr then
+			table.remove(tab.sessions, i)
+			if #tab.sessions == 0 then
+				State.tabs[tab_id] = nil
+			elseif tab.active > #tab.sessions then
+				tab.active = #tab.sessions
+			elseif tab.active > i then
+				tab.active = tab.active - 1
+			end
+			return
+		end
 	end
 end
 
@@ -59,7 +97,7 @@ end
 ----------------------------------------------------------------
 
 local function ensure_patches()
-	-- on_connect: track which client belongs to which tab
+	-- on_connect: track which client belongs to which tab's active session
 	if not State.patched.on_connect then
 		local tcp = get_tcp_server()
 		if tcp then
@@ -75,9 +113,12 @@ local function ensure_patches()
 						return
 					end -- ghost client
 					local tab_id = State.connecting
-					if tab_id and State.terminals[tab_id] and not State.clients[tab_id] then
-						State.clients[tab_id] = client.id
-						State.connecting = nil
+					if tab_id then
+						local s = active_session(tab_id)
+						if s and not s.client_id then
+							s.client_id = client.id
+							State.connecting = nil
+						end
 					end
 				end)
 			end
@@ -85,17 +126,19 @@ local function ensure_patches()
 		end
 	end
 
-	-- on_disconnect: remove client mapping
+	-- on_disconnect: find and clear the session's client mapping
 	if not State.patched.on_disconnect then
 		local tcp = get_tcp_server()
 		if tcp then
 			local orig = tcp.on_disconnect
 			tcp.on_disconnect = function(client, code, reason)
 				orig(client, code, reason)
-				for tab_id, cid in pairs(State.clients) do
-					if cid == client.id then
-						State.clients[tab_id] = nil
-						break
+				for _, tab in pairs(State.tabs) do
+					for _, s in ipairs(tab.sessions) do
+						if s.client_id == client.id then
+							s.client_id = nil
+							return
+						end
 					end
 				end
 			end
@@ -103,18 +146,18 @@ local function ensure_patches()
 		end
 	end
 
-	-- broadcast: scope events to current tab's client only
+	-- broadcast: scope events to current tab's active session client
 	if not State.patched.broadcast then
 		local server = get_root_server()
 		if server and server.broadcast then
 			server.broadcast = function(event, data)
 				local tab_id = vim.api.nvim_get_current_tabpage()
-				local client_id = State.clients[tab_id]
-				if not client_id then
+				local s = active_session(tab_id)
+				if not s or not s.client_id then
 					return false
 				end
 				if server.state and server.state.clients then
-					local client = server.state.clients[client_id]
+					local client = server.state.clients[s.client_id]
 					if client then
 						return server.send(client, event, data)
 					end
@@ -127,12 +170,12 @@ local function ensure_patches()
 end
 
 ----------------------------------------------------------------
---  Terminal lifecycle
+--  Terminal creation
 ----------------------------------------------------------------
 
-local function build_opts(config, env_table, should_focus, tab_id)
+local function build_opts(config, env_table, should_focus, count)
 	return {
-		count = tab_id,
+		count = count,
 		env = env_table,
 		cwd = config.cwd,
 		start_insert = should_focus,
@@ -162,14 +205,22 @@ local function build_opts(config, env_table, should_focus, tab_id)
 	}
 end
 
-local function create_terminal(cmd_string, env_table, config, should_focus, tab_id)
-	local opts = build_opts(config, env_table, should_focus, tab_id)
+local function create_session(tab_id, cmd_string, env_table, config, should_focus)
+	local tab = get_or_create_tab(tab_id)
+	local count = State.next_count
+	State.next_count = State.next_count + 1
+
+	State.connecting = tab_id
+
+	local opts = build_opts(config, env_table, should_focus, count)
 	local ok, term = pcall(Snacks.terminal.open, cmd_string, opts)
 	if not ok or not term or not term:buf_valid() then
 		return
 	end
 
-	State.terminals[tab_id] = { instance = term, bufnr = term.buf }
+	local session = { instance = term, bufnr = term.buf, client_id = nil }
+	table.insert(tab.sessions, session)
+	tab.active = #tab.sessions
 
 	-- Disable horizontal trackpad scrolling inside the Claude terminal
 	for _, mode in ipairs({ "t", "n" }) do
@@ -181,8 +232,7 @@ local function create_terminal(cmd_string, env_table, config, should_focus, tab_
 
 	if config.auto_close then
 		term:on("TermClose", function()
-			State.terminals[tab_id] = nil
-			State.clients[tab_id] = nil
+			remove_session_by_buf(tab_id, term.buf)
 			vim.schedule(function()
 				term:close({ buf = true })
 				vim.cmd.checktime()
@@ -191,25 +241,27 @@ local function create_terminal(cmd_string, env_table, config, should_focus, tab_
 	end
 
 	term:on("BufWipeout", function()
-		State.terminals[tab_id] = nil
-		State.clients[tab_id] = nil
+		remove_session_by_buf(tab_id, term.buf)
 	end, { buf = true })
 end
+
+----------------------------------------------------------------
+--  Cleanup
+----------------------------------------------------------------
 
 local function cleanup_closed_tabs()
 	local active = {}
 	for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
 		active[tab] = true
 	end
-	for tab_id, t in pairs(State.terminals) do
+	for tab_id, tab in pairs(State.tabs) do
 		if not active[tab_id] then
-			if t.instance then
-				pcall(function()
-					t.instance:close()
-				end)
+			for _, s in ipairs(tab.sessions) do
+				if s.instance then
+					pcall(function() s.instance:close({ buf = true }) end)
+				end
 			end
-			State.clients[tab_id] = nil
-			State.terminals[tab_id] = nil
+			State.tabs[tab_id] = nil
 		end
 	end
 end
@@ -227,45 +279,42 @@ end
 
 function M.open(cmd_string, env_table, config, do_focus)
 	ensure_patches()
+	State.cmd_cache = { cmd = cmd_string, env = env_table, config = config }
 	local should_focus = do_focus ~= false
 	local tab_id = vim.api.nvim_get_current_tabpage()
-	local t = State.terminals[tab_id]
+	local s = active_session(tab_id)
 
-	if t and term_is_valid(t) then
-		if not term_is_visible(t) then
-			t.instance:toggle()
+	if s and session_is_valid(s) then
+		if not session_is_visible(s) then
+			s.instance:toggle()
 		end
 		if should_focus then
-			term_focus(t)
+			session_focus(s)
 		end
 		return
 	end
 
-	if not State.clients[tab_id] then
-		State.connecting = tab_id
-	end
-	create_terminal(cmd_string, env_table, config, should_focus, tab_id)
+	create_session(tab_id, cmd_string, env_table, config, should_focus)
 end
 
 function M.close()
 	local tab_id = vim.api.nvim_get_current_tabpage()
-	local t = State.terminals[tab_id]
-	if not t then
-		return
+	local tab = get_tab(tab_id)
+	if not tab then return end
+	for _, s in ipairs(tab.sessions) do
+		if s.instance and s.instance:buf_valid() then
+			s.instance:close()
+		end
 	end
-	if t.instance and t.instance:buf_valid() then
-		t.instance:close()
-	end
-	State.clients[tab_id] = nil
-	State.terminals[tab_id] = nil
+	State.tabs[tab_id] = nil
 end
 
 function M.simple_toggle(cmd_string, env_table, config)
 	local tab_id = vim.api.nvim_get_current_tabpage()
-	local t = State.terminals[tab_id]
+	local s = active_session(tab_id)
 
-	if t and term_is_valid(t) then
-		t.instance:toggle()
+	if s and session_is_valid(s) then
+		s.instance:toggle()
 	else
 		M.open(cmd_string, env_table, config)
 	end
@@ -273,37 +322,98 @@ end
 
 function M.focus_toggle(cmd_string, env_table, config)
 	local tab_id = vim.api.nvim_get_current_tabpage()
-	local t = State.terminals[tab_id]
+	local s = active_session(tab_id)
 
-	if not t or not term_is_valid(t) then
+	if not s or not session_is_valid(s) then
 		M.open(cmd_string, env_table, config)
 		return
 	end
 
-	if not term_is_visible(t) then
-		t.instance:toggle()
+	if not session_is_visible(s) then
+		s.instance:toggle()
 		return
 	end
 
 	-- Visible: hide if focused, focus if not
-	if vim.api.nvim_get_current_win() == t.instance.win then
-		t.instance:toggle()
+	if vim.api.nvim_get_current_win() == s.instance.win then
+		s.instance:toggle()
 	else
-		term_focus(t)
+		session_focus(s)
 	end
 end
 
 function M.get_active_bufnr()
 	local tab_id = vim.api.nvim_get_current_tabpage()
-	local t = State.terminals[tab_id]
-	if t and t.bufnr and vim.api.nvim_buf_is_valid(t.bufnr) then
-		return t.bufnr
+	local s = active_session(tab_id)
+	if s and s.bufnr and vim.api.nvim_buf_is_valid(s.bufnr) then
+		return s.bufnr
 	end
 end
 
 function M.is_available()
 	local ok, snacks = pcall(require, "snacks")
 	return ok and snacks ~= nil and snacks.terminal ~= nil
+end
+
+----------------------------------------------------------------
+--  Multi-session controls
+----------------------------------------------------------------
+
+function M.new_session()
+	local cache = State.cmd_cache
+	if not cache then
+		vim.cmd("ClaudeCode")
+		return
+	end
+
+	ensure_patches()
+	local tab_id = vim.api.nvim_get_current_tabpage()
+	local s = active_session(tab_id)
+
+	-- Hide current session (keep it running in background)
+	if s and session_is_visible(s) then
+		s.instance:toggle()
+	end
+
+	create_session(tab_id, cache.cmd, cache.env, cache.config, true)
+end
+
+function M.cycle_session()
+	local tab_id = vim.api.nvim_get_current_tabpage()
+	local tab = get_tab(tab_id)
+	if not tab or #tab.sessions <= 1 then return end
+
+	local current = tab.sessions[tab.active]
+	if current and session_is_visible(current) then
+		current.instance:toggle()
+	end
+
+	tab.active = (tab.active % #tab.sessions) + 1
+
+	local next_s = tab.sessions[tab.active]
+	if next_s and session_is_valid(next_s) then
+		next_s.instance:toggle()
+		session_focus(next_s)
+	end
+end
+
+function M.goto_session(n)
+	local tab_id = vim.api.nvim_get_current_tabpage()
+	local tab = get_tab(tab_id)
+	if not tab or not tab.sessions[n] or n == tab.active then return end
+
+	local current = tab.sessions[tab.active]
+	if current and session_is_visible(current) then
+		current.instance:toggle()
+	end
+
+	tab.active = n
+
+	local target = tab.sessions[n]
+	if target and session_is_valid(target) then
+		target.instance:toggle()
+		session_focus(target)
+	end
 end
 
 return M

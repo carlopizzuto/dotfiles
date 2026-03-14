@@ -198,10 +198,13 @@ return {
 		},
 		keys = {
 			{ "<leader>ac", "<cmd>ClaudeCode<cr>",         desc = "Toggle Claude Code" },
-			{ "<leader>an", function()
-				vim.cmd("tabnew")
-				vim.cmd("ClaudeCode")
-			end,                                           desc = "New Claude session" },
+			{ "<leader>an", function() require("claudecode_provider").new_session() end, desc = "New Claude session" },
+			{ "<leader>a<Tab>", function() require("claudecode_provider").cycle_session() end, desc = "Cycle Claude session" },
+			{ "<leader>a1", function() require("claudecode_provider").goto_session(1) end, desc = "Claude session 1" },
+			{ "<leader>a2", function() require("claudecode_provider").goto_session(2) end, desc = "Claude session 2" },
+			{ "<leader>a3", function() require("claudecode_provider").goto_session(3) end, desc = "Claude session 3" },
+			{ "<leader>a4", function() require("claudecode_provider").goto_session(4) end, desc = "Claude session 4" },
+			{ "<leader>a5", function() require("claudecode_provider").goto_session(5) end, desc = "Claude session 5" },
 			{ "<leader>af", "<cmd>ClaudeCodeFocus<cr>",    desc = "Focus Claude Code" },
 			{ "<leader>ar", "<cmd>ClaudeCode --resume<cr>", desc = "Resume Claude Chat" },
 			{ "<leader>as", "<cmd>ClaudeCodeSend<cr>",     desc = "Send to Claude", mode = "v" },
