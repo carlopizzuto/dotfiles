@@ -192,6 +192,11 @@ return {
 		"coder/claudecode.nvim",
 		dependencies = { "folke/snacks.nvim" },
 		opts = {
+			diff_opts = {
+				open_in_new_tab = true,
+				hide_terminal_in_new_tab = true,
+				keep_terminal_focus = true,
+			},
 			terminal = {
 				provider = require("claudecode_provider"),
 			},
