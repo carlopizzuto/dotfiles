@@ -416,4 +416,26 @@ function M.goto_session(n)
 	end
 end
 
+function M.list_sessions()
+	local tab_id = vim.api.nvim_get_current_tabpage()
+	local tab = get_tab(tab_id)
+	if not tab or #tab.sessions == 0 then
+		vim.notify("No Claude sessions", vim.log.levels.INFO)
+		return
+	end
+
+	local items = {}
+	for i, s in ipairs(tab.sessions) do
+		local status = session_is_valid(s) and "running" or "dead"
+		local marker = i == tab.active and " *" or ""
+		table.insert(items, string.format("%d: Session %d [%s]%s", i, i, status, marker))
+	end
+
+	vim.ui.select(items, { prompt = "Claude Sessions" }, function(_, idx)
+		if idx then
+			M.goto_session(idx)
+		end
+	end)
+end
+
 return M
