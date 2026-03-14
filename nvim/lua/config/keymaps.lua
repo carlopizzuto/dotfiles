@@ -21,8 +21,8 @@ vim.keymap.set("n", "<leader>L", "<CMD>Lazy<CR>", { desc = "Open Lazy", noremap 
 -- open Telescope
 vim.keymap.set("n", "<leader>T", "<CMD>Telescope<CR>", { desc = "Open Telescope", noremap = true, silent = true })
 
--- open nvim-tree file explorer
-vim.keymap.set("n", "<leader>e", "<CMD>NvimTreeToggle<CR>", { desc = "Toggle Nvim Tree File Explorer", noremap = true, silent = true })
+-- open file explorer
+vim.keymap.set("n", "<leader>e", "<CMD>Neotree toggle<CR>", { desc = "Toggle File Explorer", noremap = true, silent = true })
 
 -- telescope keymaps
 vim.keymap.set("n", "<leader>ff", "<CMD>Telescope find_files<CR>", { desc = "Find Files", silent = true })
@@ -37,7 +37,7 @@ vim.keymap.set('n', '<leader>nf', function()
       if name and name ~= '' then vim.cmd('edit ' .. name) end
    end)
 end, { desc = "New File (prompt)" })
-vim.keymap.set('n', '<leader>ef', '<CMD>NvimTreeFindFile<CR>', { desc = "Reveal File in Tree", silent = true })
+vim.keymap.set('n', '<leader>E', '<CMD>Neotree reveal<CR>', { desc = "Reveal File in Tree", silent = true })
 
 -- buffers
 vim.keymap.set('n', '<S-h>', '<CMD>bprevious<CR>', { desc = "Previous Buffer", silent = true })

@@ -91,16 +91,29 @@ return {
 		config = function() require("telescope").load_extension("lazy_plugins") end,
 	},
 	{
-		"nvim-tree/nvim-tree.lua",
-		cmd = { "NvimTreeToggle", "NvimTreeFindFile" },
-		config = function()
-			require("nvim-tree").setup({
-				filters = {
-					dotfiles = false,  -- Show dotfiles like .env
-					git_ignored = false,  -- Show git ignored files
+		"nvim-neo-tree/neo-tree.nvim",
+		branch = "v3.x",
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+			"nvim-tree/nvim-web-devicons",
+			"MunifTanjim/nui.nvim",
+		},
+		cmd = "Neotree",
+		opts = {
+			filesystem = {
+				filtered_items = {
+					visible = true,
+					hide_dotfiles = false,
+					hide_gitignored = false,
 				},
-			})
-		end,
+				follow_current_file = { enabled = true },
+				use_libuv_file_watcher = true,
+			},
+			window = {
+				position = "left",
+				width = 35,
+			},
+		},
 	},
 
 	------------------------------------------------------------------
@@ -173,6 +186,7 @@ return {
 
 	{
 		"github/copilot.vim",
+		event = "InsertEnter",
 	},
 	{
 		"coder/claudecode.nvim",
