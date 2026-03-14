@@ -205,7 +205,7 @@ local function build_opts(config, env_table, should_focus, count)
 	}
 end
 
-local function create_session(tab_id, cmd_string, env_table, config, should_focus)
+local function create_session(tab_id, cmd_string, env_table, config, should_focus, name)
 	local tab = get_or_create_tab(tab_id)
 	local count = State.next_count
 	State.next_count = State.next_count + 1
@@ -218,7 +218,12 @@ local function create_session(tab_id, cmd_string, env_table, config, should_focu
 		return
 	end
 
-	local session = { instance = term, bufnr = term.buf, client_id = nil }
+	local session = {
+		instance = term,
+		bufnr = term.buf,
+		client_id = nil,
+		name = name or ("Session " .. #tab.sessions + 1),
+	}
 	table.insert(tab.sessions, session)
 	tab.active = #tab.sessions
 
@@ -366,16 +371,19 @@ function M.new_session()
 		return
 	end
 
-	ensure_patches()
-	local tab_id = vim.api.nvim_get_current_tabpage()
-	local s = active_session(tab_id)
+	vim.ui.input({ prompt = "Session name (empty for default): " }, function(input)
+		local name = (input and input ~= "") and input or nil
+		ensure_patches()
+		local tab_id = vim.api.nvim_get_current_tabpage()
+		local s = active_session(tab_id)
 
-	-- Hide current session (keep it running in background)
-	if s and session_is_visible(s) then
-		s.instance:toggle()
-	end
+		-- Hide current session (keep it running in background)
+		if s and session_is_visible(s) then
+			s.instance:toggle()
+		end
 
-	create_session(tab_id, cache.cmd, cache.env, cache.config, true)
+		create_session(tab_id, cache.cmd, cache.env, cache.config, true, name)
+	end)
 end
 
 function M.cycle_session()
@@ -424,16 +432,60 @@ function M.list_sessions()
 		return
 	end
 
-	local items = {}
+	local pickers = require("telescope.pickers")
+	local finders = require("telescope.finders")
+	local conf = require("telescope.config").values
+	local actions = require("telescope.actions")
+	local action_state = require("telescope.actions.state")
+
+	local entries = {}
 	for i, s in ipairs(tab.sessions) do
 		local status = session_is_valid(s) and "running" or "dead"
-		local marker = i == tab.active and " *" or ""
-		table.insert(items, string.format("%d: Session %d [%s]%s", i, i, status, marker))
+		local marker = i == tab.active and " (active)" or ""
+		table.insert(entries, {
+			display = string.format("%d: %s [%s]%s", i, s.name, status, marker),
+			index = i,
+			ordinal = s.name,
+		})
 	end
 
-	vim.ui.select(items, { prompt = "Claude Sessions" }, function(_, idx)
-		if idx then
-			M.goto_session(idx)
+	pickers.new({}, {
+		prompt_title = "Claude Sessions",
+		finder = finders.new_table({
+			results = entries,
+			entry_maker = function(entry)
+				return {
+					value = entry,
+					display = entry.display,
+					ordinal = entry.ordinal,
+				}
+			end,
+		}),
+		sorter = conf.generic_sorter({}),
+		attach_mappings = function(prompt_bufnr)
+			actions.select_default:replace(function()
+				local selection = action_state.get_selected_entry()
+				actions.close(prompt_bufnr)
+				if selection then
+					M.goto_session(selection.value.index)
+				end
+			end)
+			return true
+		end,
+	}):find()
+end
+
+function M.rename_session()
+	local tab_id = vim.api.nvim_get_current_tabpage()
+	local s = active_session(tab_id)
+	if not s then
+		vim.notify("No active Claude session", vim.log.levels.INFO)
+		return
+	end
+
+	vim.ui.input({ prompt = "Rename session: ", default = s.name }, function(input)
+		if input and input ~= "" then
+			s.name = input
 		end
 	end)
 end

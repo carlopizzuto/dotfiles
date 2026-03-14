@@ -206,6 +206,7 @@ return {
 			{ "<leader>a4", function() require("claudecode_provider").goto_session(4) end, desc = "Claude session 4" },
 			{ "<leader>a5", function() require("claudecode_provider").goto_session(5) end, desc = "Claude session 5" },
 			{ "<leader>al", function() require("claudecode_provider").list_sessions() end, desc = "List Claude sessions" },
+			{ "<leader>aR", function() require("claudecode_provider").rename_session() end, desc = "Rename Claude session" },
 			{ "<leader>af", "<cmd>ClaudeCodeFocus<cr>",    desc = "Focus Claude Code" },
 			{ "<leader>ar", "<cmd>ClaudeCode --resume<cr>", desc = "Resume Claude Chat" },
 			{ "<leader>as", "<cmd>ClaudeCodeSend<cr>",     desc = "Send to Claude", mode = "v" },
