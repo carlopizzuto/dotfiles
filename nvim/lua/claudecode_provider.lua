@@ -449,20 +449,30 @@ function M.list_sessions()
 		})
 	end
 
-	pickers.new({}, {
-		prompt_title = "Claude Sessions",
-		finder = finders.new_table({
-			results = entries,
+	local function make_finder(t)
+		local items = {}
+		for i, s in ipairs(t.sessions) do
+			local status = session_is_valid(s) and "running" or "dead"
+			local marker = i == t.active and " (active)" or ""
+			table.insert(items, {
+				display = string.format("%d: %s [%s]%s", i, s.name, status, marker),
+				index = i,
+				ordinal = s.name,
+			})
+		end
+		return finders.new_table({
+			results = items,
 			entry_maker = function(entry)
-				return {
-					value = entry,
-					display = entry.display,
-					ordinal = entry.ordinal,
-				}
+				return { value = entry, display = entry.display, ordinal = entry.ordinal }
 			end,
-		}),
+		})
+	end
+
+	pickers.new({}, {
+		prompt_title = "Claude Sessions (CR: switch, C-r: rename, q: close)",
+		finder = make_finder(tab),
 		sorter = conf.generic_sorter({}),
-		attach_mappings = function(prompt_bufnr)
+		attach_mappings = function(prompt_bufnr, map)
 			actions.select_default:replace(function()
 				local selection = action_state.get_selected_entry()
 				actions.close(prompt_bufnr)
@@ -470,6 +480,28 @@ function M.list_sessions()
 					M.goto_session(selection.value.index)
 				end
 			end)
+
+			map("n", "q", function()
+				actions.close(prompt_bufnr)
+			end)
+
+			map({ "i", "n" }, "<C-r>", function()
+				local selection = action_state.get_selected_entry()
+				if not selection then return end
+				local idx = selection.value.index
+				local s = tab.sessions[idx]
+				if not s then return end
+
+				actions.close(prompt_bufnr)
+				vim.ui.input({ prompt = "Rename session: ", default = s.name }, function(input)
+					if input and input ~= "" then
+						s.name = input
+					end
+					-- Reopen the picker after rename
+					vim.schedule(function() M.list_sessions() end)
+				end)
+			end)
+
 			return true
 		end,
 	}):find()
