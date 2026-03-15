@@ -40,9 +40,13 @@ end, { desc = "New File (prompt)" })
 vim.keymap.set('n', '<leader>E', '<CMD>Neotree reveal<CR>', { desc = "Reveal File in Tree", silent = true })
 
 -- buffers
-vim.keymap.set('n', '<S-h>', '<CMD>bprevious<CR>', { desc = "Previous Buffer", silent = true })
-vim.keymap.set('n', '<S-l>', '<CMD>bnext<CR>', { desc = "Next Buffer", silent = true })
+vim.keymap.set('n', '<S-h>', '<CMD>BufferLineCyclePrev<CR>', { desc = "Previous Buffer", silent = true })
+vim.keymap.set('n', '<S-l>', '<CMD>BufferLineCycleNext<CR>', { desc = "Next Buffer", silent = true })
 vim.keymap.set('n', '<leader>x', '<CMD>bdelete<CR>', { desc = "Close Buffer", silent = true })
+vim.keymap.set('n', '<leader>bp', '<CMD>BufferLinePick<CR>', { desc = "Pick Buffer", silent = true })
+vim.keymap.set('n', '<leader>bP', '<CMD>BufferLinePickClose<CR>', { desc = "Pick Buffer to Close", silent = true })
+vim.keymap.set('n', '<A-h>', '<CMD>BufferLineMovePrev<CR>', { desc = "Move Buffer Left", silent = true })
+vim.keymap.set('n', '<A-l>', '<CMD>BufferLineMoveNext<CR>', { desc = "Move Buffer Right", silent = true })
 vim.keymap.set('n', '<leader>X', '<CMD>%bdelete|edit#|bdelete#<CR>', { desc = "Close All Other Buffers", silent = true })
 
 -- navigate splits

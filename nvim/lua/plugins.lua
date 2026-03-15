@@ -35,11 +35,25 @@ return {
 					lualine_y = { "progress" },
 					lualine_z = { "location" },
 				},
-				tabline = {
-					lualine_a = { { "tabs", mode = 2 } },
-				},
+				tabline = {},
 			})
 		end,
+	},
+	{
+		"akinsho/bufferline.nvim",
+		version = "*",
+		dependencies = "nvim-tree/nvim-web-devicons",
+		event = "VeryLazy",
+		opts = {
+			options = {
+				diagnostics = "nvim_lsp",
+				offsets = {
+					{ filetype = "neo-tree", text = "File Explorer", highlight = "Directory", separator = true },
+				},
+				show_close_icon = false,
+				separator_style = "slant",
+			},
+		},
 	},
 	{ "folke/which-key.nvim", event = "VeryLazy", opts = {} },
 	{
