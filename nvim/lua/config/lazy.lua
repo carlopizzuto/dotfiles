@@ -36,6 +36,8 @@ require("lazy").setup({
 
   	checker = {
     		enabled = true,
+		frequency = 86400, -- check once per day instead of every hour
+		notify = false,
   	},
 
 	performance = {
@@ -45,7 +47,7 @@ require("lazy").setup({
      			"gzip",
    				-- "matchit",
 				-- "matchparen",
-				-- "netrwPlugin",
+				"netrwPlugin",
 				"tarPlugin",
 				"tohtml",
 				"tutor",

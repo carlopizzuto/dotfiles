@@ -35,11 +35,25 @@ return {
 					lualine_y = { "progress" },
 					lualine_z = { "location" },
 				},
-				tabline = {
-					lualine_a = { { "tabs", mode = 2 } },
-				},
+				tabline = {},
 			})
 		end,
+	},
+	{
+		"akinsho/bufferline.nvim",
+		version = "*",
+		dependencies = "nvim-tree/nvim-web-devicons",
+		event = "VeryLazy",
+		opts = {
+			options = {
+				diagnostics = "nvim_lsp",
+				offsets = {
+					{ filetype = "neo-tree", text = "File Explorer", highlight = "Directory", separator = true },
+				},
+				show_close_icon = false,
+				separator_style = "slant",
+			},
+		},
 	},
 	{ "folke/which-key.nvim", event = "VeryLazy", opts = {} },
 	{
@@ -91,16 +105,29 @@ return {
 		config = function() require("telescope").load_extension("lazy_plugins") end,
 	},
 	{
-		"nvim-tree/nvim-tree.lua",
-		cmd = { "NvimTreeToggle", "NvimTreeFindFile" },
-		config = function()
-			require("nvim-tree").setup({
-				filters = {
-					dotfiles = false,  -- Show dotfiles like .env
-					git_ignored = false,  -- Show git ignored files
+		"nvim-neo-tree/neo-tree.nvim",
+		branch = "v3.x",
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+			"nvim-tree/nvim-web-devicons",
+			"MunifTanjim/nui.nvim",
+		},
+		cmd = "Neotree",
+		opts = {
+			filesystem = {
+				filtered_items = {
+					visible = true,
+					hide_dotfiles = false,
+					hide_gitignored = false,
 				},
-			})
-		end,
+				follow_current_file = { enabled = true },
+				use_libuv_file_watcher = true,
+			},
+			window = {
+				position = "left",
+				width = 35,
+			},
+		},
 	},
 
 	------------------------------------------------------------------
@@ -173,21 +200,32 @@ return {
 
 	{
 		"github/copilot.vim",
+		event = "InsertEnter",
 	},
 	{
 		"coder/claudecode.nvim",
 		dependencies = { "folke/snacks.nvim" },
 		opts = {
+			diff_opts = {
+				open_in_new_tab = true,
+				hide_terminal_in_new_tab = true,
+				keep_terminal_focus = true,
+			},
 			terminal = {
 				provider = require("claudecode_provider"),
 			},
 		},
 		keys = {
 			{ "<leader>ac", "<cmd>ClaudeCode<cr>",         desc = "Toggle Claude Code" },
-			{ "<leader>an", function()
-				vim.cmd("tabnew")
-				vim.cmd("ClaudeCode")
-			end,                                           desc = "New Claude session" },
+			{ "<leader>an", function() require("claudecode_provider").new_session() end, desc = "New Claude session" },
+			{ "<leader>a<Tab>", function() require("claudecode_provider").cycle_session() end, desc = "Cycle Claude session" },
+			{ "<leader>a1", function() require("claudecode_provider").goto_session(1) end, desc = "Claude session 1" },
+			{ "<leader>a2", function() require("claudecode_provider").goto_session(2) end, desc = "Claude session 2" },
+			{ "<leader>a3", function() require("claudecode_provider").goto_session(3) end, desc = "Claude session 3" },
+			{ "<leader>a4", function() require("claudecode_provider").goto_session(4) end, desc = "Claude session 4" },
+			{ "<leader>a5", function() require("claudecode_provider").goto_session(5) end, desc = "Claude session 5" },
+			{ "<leader>al", function() require("claudecode_provider").list_sessions() end, desc = "List Claude sessions" },
+			{ "<leader>aR", function() require("claudecode_provider").rename_session() end, desc = "Rename Claude session" },
 			{ "<leader>af", "<cmd>ClaudeCodeFocus<cr>",    desc = "Focus Claude Code" },
 			{ "<leader>ar", "<cmd>ClaudeCode --resume<cr>", desc = "Resume Claude Chat" },
 			{ "<leader>as", "<cmd>ClaudeCodeSend<cr>",     desc = "Send to Claude", mode = "v" },

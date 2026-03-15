@@ -21,8 +21,8 @@ vim.keymap.set("n", "<leader>L", "<CMD>Lazy<CR>", { desc = "Open Lazy", noremap 
 -- open Telescope
 vim.keymap.set("n", "<leader>T", "<CMD>Telescope<CR>", { desc = "Open Telescope", noremap = true, silent = true })
 
--- open nvim-tree file explorer
-vim.keymap.set("n", "<leader>e", "<CMD>NvimTreeToggle<CR>", { desc = "Toggle Nvim Tree File Explorer", noremap = true, silent = true })
+-- open file explorer
+vim.keymap.set("n", "<leader>e", "<CMD>Neotree toggle<CR>", { desc = "Toggle File Explorer", noremap = true, silent = true })
 
 -- telescope keymaps
 vim.keymap.set("n", "<leader>ff", "<CMD>Telescope find_files<CR>", { desc = "Find Files", silent = true })
@@ -37,12 +37,16 @@ vim.keymap.set('n', '<leader>nf', function()
       if name and name ~= '' then vim.cmd('edit ' .. name) end
    end)
 end, { desc = "New File (prompt)" })
-vim.keymap.set('n', '<leader>ef', '<CMD>NvimTreeFindFile<CR>', { desc = "Reveal File in Tree", silent = true })
+vim.keymap.set('n', '<leader>E', '<CMD>Neotree reveal<CR>', { desc = "Reveal File in Tree", silent = true })
 
 -- buffers
-vim.keymap.set('n', '<S-h>', '<CMD>bprevious<CR>', { desc = "Previous Buffer", silent = true })
-vim.keymap.set('n', '<S-l>', '<CMD>bnext<CR>', { desc = "Next Buffer", silent = true })
+vim.keymap.set('n', '<S-h>', '<CMD>BufferLineCyclePrev<CR>', { desc = "Previous Buffer", silent = true })
+vim.keymap.set('n', '<S-l>', '<CMD>BufferLineCycleNext<CR>', { desc = "Next Buffer", silent = true })
 vim.keymap.set('n', '<leader>x', '<CMD>bdelete<CR>', { desc = "Close Buffer", silent = true })
+vim.keymap.set('n', '<leader>bp', '<CMD>BufferLinePick<CR>', { desc = "Pick Buffer", silent = true })
+vim.keymap.set('n', '<leader>bP', '<CMD>BufferLinePickClose<CR>', { desc = "Pick Buffer to Close", silent = true })
+vim.keymap.set('n', '<A-h>', '<CMD>BufferLineMovePrev<CR>', { desc = "Move Buffer Left", silent = true })
+vim.keymap.set('n', '<A-l>', '<CMD>BufferLineMoveNext<CR>', { desc = "Move Buffer Right", silent = true })
 vim.keymap.set('n', '<leader>X', '<CMD>%bdelete|edit#|bdelete#<CR>', { desc = "Close All Other Buffers", silent = true })
 
 -- navigate splits
@@ -69,16 +73,42 @@ vim.keymap.set('t', '<C-\\>', [[<C-\><C-n><C-w>k]], { desc = "Exit T-Mode + Focu
 
 vim.keymap.set('n', '<C-]>', [[<C-w>ja]], { desc = "Focus Terminal Below" })
 
--- restart nvim (requires tmux)
+-- restart nvim preserving session (requires tmux)
 vim.keymap.set('n', '<leader>rr', function()
-   local file = vim.fn.expand('%:p')
-   local row = vim.api.nvim_win_get_cursor(0)[1]
-   local cmd = 'nvim'
-   if file ~= '' then
-      cmd = string.format('nvim +%d %s', row, vim.fn.shellescape(file))
+   local had_neotree = false
+   -- close Neo-tree and terminal buffers (they can't be serialized)
+   for _, win in ipairs(vim.api.nvim_list_wins()) do
+      local buf = vim.api.nvim_win_get_buf(win)
+      local ft = vim.bo[buf].filetype
+      local bt = vim.bo[buf].buftype
+      if ft == 'neo-tree' then
+         had_neotree = true
+         vim.api.nvim_win_close(win, true)
+      elseif bt == 'terminal' then
+         vim.api.nvim_win_close(win, true)
+      end
    end
+   -- wipe leftover terminal buffers
+   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.bo[buf].buftype == 'terminal' and vim.api.nvim_buf_is_valid(buf) then
+         vim.api.nvim_buf_delete(buf, { force = true })
+      end
+   end
+
+   local session_file = vim.fn.stdpath('state') .. '/restart_session.vim'
+   vim.cmd('mksession! ' .. vim.fn.fnameescape(session_file))
+
+   -- after restore: reopen Neo-tree if it was open
+   local post_cmds = 'silent! call delete("' .. session_file:gsub('"', '\\"') .. '")'
+   if had_neotree then
+      post_cmds = post_cmds .. ' | Neotree show'
+   end
+
+   local cmd = string.format('nvim -S %s -c %s',
+      vim.fn.shellescape(session_file),
+      vim.fn.shellescape(post_cmds))
    vim.fn.system({ 'tmux', 'respawn-pane', '-k', cmd })
-end, { desc = "Restart Neovim (tmux)" })
+end, { desc = "Restart Neovim (tmux, preserve session)" })
 
 -- resize panes
 vim.keymap.set('n', '<C-Left>', '5<C-w><', { desc = "Decrease Width", silent = true })

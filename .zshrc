@@ -4,6 +4,13 @@
 (cd ~/.dotfiles && git pull --ff-only origin main &>/dev/null &)
 
 # ---------------------------------------------------------------------------
+# 0.  Auto-start tmux (attach to existing session or create new one)
+# ---------------------------------------------------------------------------
+if [[ -z "$TMUX" && $- == *i* && -z "$INSIDE_EMACS" && -z "$VSCODE_RESOLVING_ENVIRONMENT" ]]; then
+  exec tmux new-session
+fi
+
+# ---------------------------------------------------------------------------
 # 0.  Clean, deterministic PATH (remove duplicates, predictable order)
 # ---------------------------------------------------------------------------
 typeset -U path PATH
