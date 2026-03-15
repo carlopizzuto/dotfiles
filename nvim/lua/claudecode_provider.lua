@@ -702,6 +702,114 @@ function M.list_sessions()
 	local conf = require("telescope.config").values
 	local actions = require("telescope.actions")
 	local action_state = require("telescope.actions.state")
+	local previewers = require("telescope.previewers")
+
+	--- Extract display text from a message's content (string or content blocks).
+	--- Skips tool_use and tool_result blocks (they are not chat content).
+	local function extract_content_lines(content)
+		local result = {}
+		if type(content) == "string" then
+			if vim.trim(content) ~= "" then
+				for _, sub_line in ipairs(vim.split(content, "\n", { plain = true })) do
+					table.insert(result, (sub_line:gsub("\r", "")))
+				end
+			end
+		elseif type(content) == "table" then
+			for _, block in ipairs(content) do
+				if block.type == "text" and block.text then
+					for _, sub_line in ipairs(vim.split(block.text, "\n", { plain = true })) do
+						table.insert(result, (sub_line:gsub("\r", "")))
+					end
+				end
+			end
+		end
+		return result
+	end
+
+	local session_previewer = previewers.new_buffer_previewer({
+		title = "Chat Preview",
+		define_preview = function(self, entry, _status)
+			local sid = entry.value.session_id
+			if not sid then
+				vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "No preview available" })
+				return
+			end
+
+			local filepath = get_project_dir() .. "/" .. sid .. ".jsonl"
+			local f = io.open(filepath, "r")
+			if not f then
+				vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "Conversation file not found" })
+				return
+			end
+
+			local lines = {}
+			local highlights = {} -- { line_idx, hl_group }
+			local last_role = nil
+			for raw_line in f:lines() do
+				local ok, data = pcall(vim.json.decode, raw_line)
+				if ok and data.message and data.message.content then
+					local role = data.type
+					-- Only show user and assistant; skip user messages that
+					-- are purely tool_result blocks (no text content).
+					if role == "user" or role == "assistant" then
+						local content_lines = extract_content_lines(data.message.content)
+						if #content_lines > 0 then
+							-- Collapse consecutive messages from the same role
+							if role ~= last_role then
+								if #lines > 0 then
+									table.insert(lines, "")
+								end
+								local header = string.format("── %s ──", role:upper())
+								table.insert(highlights, {
+									line = #lines,
+									hl = role == "user" and "Function" or "Keyword",
+								})
+								table.insert(lines, header)
+							end
+							vim.list_extend(lines, content_lines)
+							last_role = role
+						end
+					end
+				end
+			end
+			f:close()
+
+			if #lines == 0 then
+				lines = { "No messages found" }
+			end
+
+			-- Sanitize: nvim_buf_set_lines rejects any string containing \n
+			local clean = {}
+			for _, l in ipairs(lines) do
+				for _, part in ipairs(vim.split(l, "\n", { plain = true })) do
+					table.insert(clean, (part:gsub("\r", "")))
+				end
+			end
+
+			vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, clean)
+			vim.bo[self.state.bufnr].filetype = "markdown"
+			vim.wo[self.state.winid].wrap = true
+			vim.wo[self.state.winid].linebreak = true
+			vim.wo[self.state.winid].sidescrolloff = 0
+			vim.wo[self.state.winid].scrolloff = 0
+
+			for _, hl in ipairs(highlights) do
+				vim.api.nvim_buf_add_highlight(self.state.bufnr, -1, hl.hl, hl.line, 0, -1)
+			end
+
+			-- Auto-scroll to the bottom (deferred so Telescope's window is ready)
+			local winid = self.state.winid
+			local bufnr = self.state.bufnr
+			vim.schedule(function()
+				if vim.api.nvim_win_is_valid(winid) and vim.api.nvim_buf_is_valid(bufnr) then
+					local line_count = vim.api.nvim_buf_line_count(bufnr)
+					if line_count > 0 then
+						vim.api.nvim_win_set_cursor(winid, { line_count, 0 })
+					end
+				end
+			end)
+		end,
+	})
 
 	local function make_finder()
 		return finders.new_table({
@@ -715,6 +823,7 @@ function M.list_sessions()
 	pickers.new({}, {
 		prompt_title = "Claude Sessions (CR: switch/resume, C-r: rename, q: close)",
 		finder = make_finder(),
+		previewer = session_previewer,
 		sorter = conf.generic_sorter({}),
 		attach_mappings = function(prompt_bufnr, map)
 			actions.select_default:replace(function()
