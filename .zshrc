@@ -7,7 +7,13 @@
 # 0.  Auto-start tmux (attach to existing session or create new one)
 # ---------------------------------------------------------------------------
 if [[ -z "$TMUX" && $- == *i* && -z "$INSIDE_EMACS" && -z "$VSCODE_RESOLVING_ENVIRONMENT" ]]; then
-  exec tmux new-session
+  # Attach to first unattached session if one exists, otherwise create new
+  unattached=$(tmux ls 2>/dev/null | grep -v '(attached)' | head -1 | cut -d: -f1)
+  if [[ -n "$unattached" ]]; then
+    exec tmux attach -t "$unattached"
+  else
+    exec tmux new-session
+  fi
 fi
 
 # ---------------------------------------------------------------------------
