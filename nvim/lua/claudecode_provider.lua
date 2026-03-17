@@ -60,6 +60,18 @@ local function save_name_map(name_map)
 	save_all_persisted(all)
 end
 
+--- Load global defaults (model, effort)
+local function load_defaults()
+	local all = load_all_persisted()
+	return all._defaults or {}
+end
+
+local function save_defaults(defaults)
+	local all = load_all_persisted()
+	all._defaults = defaults
+	save_all_persisted(all)
+end
+
 --- Persist running sessions' names into the name map
 local function persist_names()
 	local name_map = load_name_map()
@@ -365,6 +377,15 @@ local function create_session(tab_id, cmd_string, env_table, config, should_focu
 	-- Snapshot existing .jsonl files BEFORE opening terminal (for new sessions)
 	local existing_files = nil
 	local session_id = nil
+
+	-- Append model/effort defaults
+	local defaults = load_defaults()
+	if defaults.model then
+		cmd_string = cmd_string .. " --model " .. defaults.model
+	end
+	if defaults.effort then
+		cmd_string = cmd_string .. " --effort " .. defaults.effort
+	end
 
 	if resume_id then
 		session_id = resume_id
@@ -885,6 +906,25 @@ function M.rename_session()
 			s.name = input
 			persist_names()
 		end
+	end)
+end
+
+function M.set_defaults()
+	local models = { "opus", "sonnet", "haiku" }
+	local efforts = { "max", "high", "medium", "low" }
+	local defaults = load_defaults()
+
+	vim.ui.select(models, {
+		prompt = "Model (current: " .. (defaults.model or "default") .. ")",
+	}, function(model)
+		if not model then return end
+		vim.ui.select(efforts, {
+			prompt = "Effort (current: " .. (defaults.effort or "default") .. ")",
+		}, function(effort)
+			if not effort then return end
+			save_defaults({ model = model, effort = effort })
+			vim.notify(string.format("Claude defaults: model=%s, effort=%s", model, effort))
+		end)
 	end)
 end
 
