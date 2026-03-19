@@ -31,16 +31,17 @@ gaps outer -5
 default_border pixel 5
 default_floating_border pixel 5
 
-output DP-3 mode 3840x2160 scale 1.5 position 1080 0 bg ~/.config/WPPRs/wallpaper_main.png fill
-output DP-2 mode 1080x1920 transform 270 scale 1 position 0 -275 bg ~/.config/WPPRs/wallpaper_portrait.png fill
+seat * xcursor_theme Adwaita 32
+
+output DP-3 mode 3840x2160 scale 1.5 position 1234 0 bg ~/.config/WPPRs/wallpaper_main.png fill
+output DP-2 mode 3840x2160 transform 270 scale 1.75 position 0 -470 bg ~/.config/WPPRs/wallpaper_portrait.png fill
 
 
 # ======================================
 # ========== STARTUP EXECs =============
 # ======================================
 
-# Re-enable DP-2 (disabled at kernel level via video=DP-2:d for Ly single-monitor)
-exec echo on | sudo tee /sys/class/drm/card2-DP-2/status
+# DP-2 re-enable moved to ~/.zprofile (runs before Sway starts, so EDID is available)
 
 # Export Wayland env vars to systemd (needed for portals, file dialogs, etc.)
 exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway GTK_THEME
@@ -88,6 +89,7 @@ for_window [app_id="thunar"] floating enable
 for_window [app_id="org.pulseaudio.pavucontrol"] floating enable
 for_window [app_id="blueman-manager"] floating enable
 for_window [app_id="localsend"] floating enable, sticky enable, resize set 500 600, move position center
+for_window [app_id="cava-visualizer"] resize set height 250 px
 
 
 # ======================================
@@ -129,6 +131,9 @@ bindsym $mod+s exec grim -g "$(slurp)" - | swappy -f -
 
 # Clipboard manager
 bindsym $mod+Shift+v exec cliphist list | wofi --dmenu | cliphist decode | wl-copy
+
+# open cava audio visualizer below current window
+bindsym $mod+Shift+a split v; exec $term --app-id cava-visualizer cava
 
 # change focus
 bindsym $mod+h focus left
