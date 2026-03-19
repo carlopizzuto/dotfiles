@@ -27,6 +27,12 @@ vim.opt.tabstop = 5
 -- open horizontal split on the right
 vim.opt.splitright = true
 
+-- hide cmdline when not in use (noice.nvim handles display)
+vim.opt.cmdheight = 0
+
+-- live preview for substitutions (:s/foo/bar)
+vim.opt.inccommand = "split"
+
 
 -- diagnostics
 vim.diagnostic.config({

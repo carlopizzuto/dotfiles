@@ -59,8 +59,14 @@ vim.keymap.set('n', '<C-l>', '<C-w>l', { desc = "Focus Right Split", silent = tr
 vim.keymap.set('v', 'J', ":m '>+1<CR>gv=gv", { desc = "Move Lines Down", silent = true })
 vim.keymap.set('v', 'K', ":m '<-2<CR>gv=gv", { desc = "Move Lines Up", silent = true })
 
--- clear search highlight
-vim.keymap.set('n', '<Esc>', '<CMD>nohlsearch<CR>', { desc = "Clear Search Highlight", silent = true })
+-- clear search highlight + dismiss notifications
+vim.keymap.set('n', '<Esc>', function()
+   vim.cmd("nohlsearch")
+   require("notify").dismiss({ silent = true, pending = true })
+end, { desc = "Clear Search + Dismiss Notifications", silent = true })
+
+-- fuzzy command history
+vim.keymap.set('n', '<leader>:', '<CMD>Telescope command_history<CR>', { desc = "Command History", silent = true })
 
 -- open a terminal in bottom split with a height of 20
 vim.keymap.set('n', '<leader>tt', "<CMD>belowright 20split | terminal<CR><C-w>J", { desc = "Open Terminal Below", silent = true })

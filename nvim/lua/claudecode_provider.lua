@@ -422,6 +422,7 @@ local function create_session(tab_id, cmd_string, env_table, config, should_focu
 		session_id = session_id, -- nil for new sessions until captured
 	}
 	table.insert(tab.sessions, session)
+
 	tab.active = #tab.sessions
 
 	-- Disable horizontal trackpad scrolling inside the Claude terminal
@@ -907,6 +908,32 @@ function M.rename_session()
 			persist_names()
 		end
 	end)
+end
+
+function M.get_defaults()
+	return load_defaults()
+end
+
+function M.session_info_by_buf(bufnr)
+	for _, tab in pairs(State.tabs) do
+		for _, s in ipairs(tab.sessions) do
+			if s.bufnr == bufnr then
+				return { name = s.name, session_id = s.session_id }
+			end
+		end
+	end
+end
+
+function M.tab_session_count(tab_id)
+	local tab = get_tab(tab_id)
+	if not tab then return nil end
+	return { active = tab.active, total = #tab.sessions }
+end
+
+function M.active_session_info(tab_id)
+	local s = active_session(tab_id)
+	if not s then return nil end
+	return { name = s.name, session_id = s.session_id }
 end
 
 function M.set_defaults()

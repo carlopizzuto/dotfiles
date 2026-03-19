@@ -18,6 +18,54 @@ return {
 		dependencies = "nvim-tree/nvim-web-devicons",
 		event = "VeryLazy",
 		config = function()
+			local function claude_session_name()
+				local ok, provider = pcall(require, "claudecode_provider")
+				if not ok then return "" end
+				local tab_id = vim.api.nvim_get_current_tabpage()
+				local info = provider.active_session_info and provider.active_session_info(tab_id)
+				local name = info and info.name or ""
+				-- Truncate based on window width, leaving room for the session count
+				local max = math.floor(vim.api.nvim_win_get_width(0) * 0.7)
+				if #name > max then name = name:sub(1, max) .. "..." end
+				return name
+			end
+
+			local function claude_session_count()
+				local ok, provider = pcall(require, "claudecode_provider")
+				if not ok then return "" end
+				local tab_id = vim.api.nvim_get_current_tabpage()
+				local info = provider.tab_session_count and provider.tab_session_count(tab_id)
+				if not info or info.total <= 1 then return "" end
+				return info.active .. "/" .. info.total
+			end
+
+			local function claude_model_effort()
+				local ok, provider = pcall(require, "claudecode_provider")
+				if not ok then return "" end
+				local defaults = provider.get_defaults and provider.get_defaults() or {}
+				local parts = {}
+				if defaults.model then table.insert(parts, defaults.model) end
+				if defaults.effort then table.insert(parts, defaults.effort) end
+				if #parts == 0 then return "" end
+				return table.concat(parts, " | ")
+			end
+
+			local is_claude_terminal = function()
+				return vim.bo.filetype == "snacks_terminal"
+			end
+
+			local claude_extension = {
+				sections = {
+					lualine_a = { "mode" },
+					lualine_b = { claude_model_effort },
+					lualine_c = {},
+					lualine_x = {},
+					lualine_y = {},
+					lualine_z = {},
+				},
+				filetypes = { "snacks_terminal" },
+			}
+
 			require("lualine").setup({
 				options = {
 					icons_enabled        = true,
@@ -26,6 +74,7 @@ return {
 					section_separators   = { left = "", right = "" },
 					always_divide_middle = true,
 					always_show_tabline  = true,
+					globalstatus         = false,
 				},
 				sections = {
 					lualine_a = { "mode" },
@@ -35,7 +84,24 @@ return {
 					lualine_y = { "progress" },
 					lualine_z = { "location" },
 				},
+				winbar = {
+					lualine_a = { { claude_session_name, cond = is_claude_terminal } },
+					lualine_b = {},
+					lualine_c = {},
+					lualine_x = {},
+					lualine_y = {},
+					lualine_z = { { claude_session_count, cond = is_claude_terminal } },
+				},
+				inactive_winbar = {
+					lualine_a = { { claude_session_name, cond = is_claude_terminal } },
+					lualine_b = {},
+					lualine_c = {},
+					lualine_x = {},
+					lualine_y = {},
+					lualine_z = { { claude_session_count, cond = is_claude_terminal } },
+				},
 				tabline = {},
+				extensions = { claude_extension },
 			})
 		end,
 	},
@@ -57,29 +123,58 @@ return {
 	},
 	{ "folke/which-key.nvim", event = "VeryLazy", opts = {} },
 	{
-		"gelguy/wilder.nvim",
-		event = "CmdlineEnter",
-		build = ":UpdateRemotePlugins",
-		config = function()
-			local wilder = require("wilder")
-			wilder.setup({
-				modes = { ":", "/", "?" },
-				next_key      = "<Down>",
-				previous_key  = "<Up>",
-				accept_key    = "<S-CR>",
-			})
-			wilder.set_option("pipeline", {
-				wilder.branch(
-					wilder.cmdline_pipeline(),
-					wilder.search_pipeline()
-				),
-			})
-			wilder.set_option("renderer", wilder.popupmenu_renderer({
-				highlighter = wilder.basic_highlighter(),
-				left        = { " ", wilder.popupmenu_devicons() },
-				right       = { " ", wilder.popupmenu_scrollbar() },
-			}))
-		end,
+		"folke/noice.nvim",
+		event = "VeryLazy",
+		dependencies = { "MunifTanjim/nui.nvim", "rcarriga/nvim-notify" },
+		opts = {
+			cmdline = {
+				view = "cmdline_popup",
+				format = {
+					cmdline =     { icon = ">" },
+					search_down = { icon = "/" },
+					search_up =   { icon = "?" },
+					lua =         { icon = "" },
+					help =        { icon = "?" },
+					filter =      { icon = "$" },
+				},
+			},
+			popupmenu = { backend = "nui" },
+			lsp = {
+				override = {
+					["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+					["vim.lsp.util.stylize_markdown"] = true,
+				},
+			},
+			presets = {
+				bottom_search = false,         -- floating search too
+				command_palette = true,         -- group cmdline + popupmenu together
+				long_message_to_split = true,   -- long messages go to a split
+				inc_rename = true,              -- floating input for inc-rename.nvim
+			},
+		},
+	},
+	{
+		"rcarriga/nvim-notify",
+		opts = {
+			stages = "fade_in_slide_out",
+			timeout = 3000,
+			top_down = true,
+		},
+	},
+	{
+		"mrjones2014/legendary.nvim",
+		priority = 10000,
+		lazy = false,
+		dependencies = { "folke/which-key.nvim" },
+		opts = {
+			extensions = {
+				lazy_nvim = true,
+				which_key = { auto_register = true },
+			},
+		},
+		keys = {
+			{ "<C-p>", "<cmd>Legendary<cr>", desc = "Command Palette" },
+		},
 	},
 
 	------------------------------------------------------------------
