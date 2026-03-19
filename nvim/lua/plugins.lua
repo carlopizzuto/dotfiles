@@ -333,9 +333,11 @@ return {
 	------------------------------------------------------------------
 	{
 		"hrsh7th/nvim-cmp",
-		event = "InsertEnter",
+		event = { "InsertEnter", "CmdlineEnter" },
 		dependencies = {
 			"hrsh7th/cmp-nvim-lsp",
+			"hrsh7th/cmp-cmdline",
+			"dmitmel/cmp-cmdline-history",
 			"L3MON4D3/LuaSnip",
 		},
 		config = function()
@@ -374,6 +376,27 @@ return {
 				-- INLINE GHOST TEXT
 				experimental = {
 					ghost_text = { hl_group = "Comment" },
+				},
+			})
+
+			-- ── CMDLINE : ──────────────────────────────────────────────
+			local trigger = { require("cmp.types").cmp.TriggerEvent.TextChanged }
+
+			cmp.setup.cmdline(":", {
+				completion = { autocomplete = trigger },
+				mapping = cmp.mapping.preset.cmdline(),
+				sources = cmp.config.sources(
+					{ { name = "cmdline_history" } },
+					{ { name = "cmdline" } }
+				),
+			})
+
+			-- ── CMDLINE / ? ────────────────────────────────────────────
+			cmp.setup.cmdline({ "/", "?" }, {
+				completion = { autocomplete = trigger },
+				mapping = cmp.mapping.preset.cmdline(),
+				sources = {
+					{ name = "cmdline_history" },
 				},
 			})
 		end,
