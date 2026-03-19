@@ -1,14 +1,10 @@
 # Shared
 ### Nvim
-- See if there is a way to save 'layouts' for dirs; opens the same buffers, etc.
 - Make file explorer auto-open on nvim start
 - Highlight unstaged/staged lines in file
 - When closing a file from buffertabs, open the next one/empty buffer if no others
 - Make buffertabs NOT expand into claude code; claude code window should be like file editor window
-- Update cmdline controlls:
-    - Tab/Shift-Tab to go up/down
-    - Enter to prefill selected
-    - Any other normal key: add to cmdline input (deselect option)
+- See if there is a way to save 'layouts' for dirs; opekns the same buffers, etc.
 #### Claude Code
 - Save model + effort to conversation session
 - Figure out how to copy to clipboard inside of nvim while SSHd

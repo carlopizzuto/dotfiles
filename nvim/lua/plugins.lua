@@ -416,10 +416,35 @@ return {
 				},
 			}
 
+			local cmdline_mapping = {
+				["<Tab>"] = cmp.mapping(function(fallback)
+					if cmp.visible() then
+						cmp.select_next_item({ behavior = cmp.SelectBehavior.Select })
+					else
+						fallback()
+					end
+				end, { "c" }),
+				["<S-Tab>"] = cmp.mapping(function(fallback)
+					if cmp.visible() then
+						cmp.select_prev_item({ behavior = cmp.SelectBehavior.Select })
+					else
+						fallback()
+					end
+				end, { "c" }),
+				["<CR>"] = cmp.mapping(function(fallback)
+					if cmp.visible() and cmp.get_selected_entry() then
+						cmp.confirm({ select = false })
+					else
+						fallback()
+					end
+				end, { "c" }),
+				["<C-e>"] = cmp.mapping.abort(),
+			}
+
 			-- ── CMDLINE : ──────────────────────────────────────────────
 			cmp.setup.cmdline(":", {
 				completion = { autocomplete = trigger },
-				mapping = cmp.mapping.preset.cmdline(),
+				mapping = cmdline_mapping,
 				formatting = cmdline_formatting,
 				window = cmdline_window,
 				sources = {
@@ -431,7 +456,7 @@ return {
 			-- ── CMDLINE / ? ────────────────────────────────────────────
 			cmp.setup.cmdline({ "/", "?" }, {
 				completion = { autocomplete = trigger },
-				mapping = cmp.mapping.preset.cmdline(),
+				mapping = cmdline_mapping,
 				formatting = cmdline_formatting,
 				window = cmdline_window,
 				sources = {
