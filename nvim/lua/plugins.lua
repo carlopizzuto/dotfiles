@@ -139,6 +139,11 @@ return {
 				},
 			},
 			popupmenu = { backend = "nui" },
+			views = {
+				cmdline_popup = {
+					size = { width = 60 },
+				},
+			},
 			lsp = {
 				override = {
 					["vim.lsp.util.convert_input_to_markdown_lines"] = true,
@@ -379,24 +384,58 @@ return {
 				},
 			})
 
-			-- ── CMDLINE : ──────────────────────────────────────────────
+			-- ── CMDLINE SHARED ─────────────────────────────────────────
 			local trigger = { require("cmp.types").cmp.TriggerEvent.TextChanged }
 
+			local cmdline_width = 53  -- 60 (noice) - 2 border - 2 padding
+			local cmdline_formatting = {
+				fields = { "abbr" },
+				format = function(_, vim_item)
+					local abbr = vim_item.abbr or ""
+					if #abbr < cmdline_width then
+						vim_item.abbr = abbr .. string.rep(" ", cmdline_width - #abbr)
+					elseif #abbr > cmdline_width then
+						vim_item.abbr = abbr:sub(1, cmdline_width - 1) .. "…"
+					end
+					return vim_item
+				end,
+			}
+
+			-- FloatBorder fg (colored border chars) + Normal bg (no padding strip)
+			local fb = vim.api.nvim_get_hl(0, { name = "FloatBorder", link = false })
+			local nr = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
+			vim.api.nvim_set_hl(0, "CmpCmdBorder", { fg = fb.fg, bg = nr.bg })
+
+			local cmdline_window = {
+				completion = {
+					border        = { "", "", "", "│", "╯", "─", "╰", "│" },
+					side_padding  = 1,
+					zindex        = 1001,
+					max_height    = 15,
+					winhighlight  = "Normal:Normal,FloatBorder:CmpCmdBorder,CursorLine:Visual,Search:None",
+				},
+			}
+
+			-- ── CMDLINE : ──────────────────────────────────────────────
 			cmp.setup.cmdline(":", {
 				completion = { autocomplete = trigger },
 				mapping = cmp.mapping.preset.cmdline(),
-				sources = cmp.config.sources(
-					{ { name = "cmdline_history" } },
-					{ { name = "cmdline" } }
-				),
+				formatting = cmdline_formatting,
+				window = cmdline_window,
+				sources = {
+					{ name = "cmdline_history", max_item_count = 20 },
+					{ name = "cmdline" },
+				},
 			})
 
 			-- ── CMDLINE / ? ────────────────────────────────────────────
 			cmp.setup.cmdline({ "/", "?" }, {
 				completion = { autocomplete = trigger },
 				mapping = cmp.mapping.preset.cmdline(),
+				formatting = cmdline_formatting,
+				window = cmdline_window,
 				sources = {
-					{ name = "cmdline_history" },
+					{ name = "cmdline_history", max_item_count = 20 },
 				},
 			})
 		end,
