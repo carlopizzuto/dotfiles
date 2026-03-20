@@ -75,6 +75,7 @@ return {
 					always_divide_middle = true,
 					always_show_tabline  = true,
 					globalstatus         = false,
+					disabled_filetypes   = { winbar = { "neo-tree" } },
 				},
 				sections = {
 					lualine_a = { "mode" },
@@ -214,6 +215,18 @@ return {
 		},
 		cmd = "Neotree",
 		opts = {
+			sources = { "filesystem", "buffers", "git_status" },
+			source_selector = {
+				winbar = true,
+				content_layout = "center",
+			},
+			default_component_configs = {
+				indent = {
+					with_expanders = true,
+					expander_collapsed = "",
+					expander_expanded = "",
+				},
+			},
 			filesystem = {
 				filtered_items = {
 					visible = true,
