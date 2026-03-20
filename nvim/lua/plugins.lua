@@ -251,6 +251,61 @@ return {
 	},
 
 	------------------------------------------------------------------
+	--  1b. EDITOR UI
+	------------------------------------------------------------------
+	-- git change indicators in the sign column (added/modified/deleted)
+	{
+		"lewis6991/gitsigns.nvim",
+		event = { "BufReadPost", "BufNewFile" },
+		opts = {
+			signs = {
+				add          = { text = "▎" },
+				change       = { text = "▎" },
+				delete       = { text = "" },
+				topdelete    = { text = "" },
+				changedelete = { text = "▎" },
+				untracked    = { text = "▎" },
+			},
+			signs_staged = {
+				add          = { text = "▍" },
+				change       = { text = "▍" },
+				delete       = { text = "" },
+				topdelete    = { text = "" },
+				changedelete = { text = "▍" },
+				untracked    = { text = "▍" },
+			},
+		},
+	},
+	-- indent guides
+	{
+		"lukas-reineke/indent-blankline.nvim",
+		main = "ibl",
+		event = { "BufReadPost", "BufNewFile" },
+		opts = {
+			indent = { char = "│" },
+			scope = { enabled = true, show_start = false, show_end = false },
+		},
+	},
+	-- smooth scrolling
+	{
+		"karb94/neoscroll.nvim",
+		event = "VeryLazy",
+		opts = {
+			mappings = { "<C-u>", "<C-d>", "<C-b>", "<C-f>", "zt", "zz", "zb" },
+		},
+	},
+	-- scrollbar with diagnostics + git markers
+	{
+		"petertriho/nvim-scrollbar",
+		event = { "BufReadPost", "BufNewFile" },
+		dependencies = { "lewis6991/gitsigns.nvim" },
+		config = function()
+			require("scrollbar").setup()
+			require("scrollbar.handlers.gitsigns").setup()
+		end,
+	},
+
+	------------------------------------------------------------------
 	--  2.  EDITING AIDS
 	------------------------------------------------------------------
 	{ "smjonas/inc-rename.nvim", cmd = "IncRename", config = true },

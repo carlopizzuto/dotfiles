@@ -16,8 +16,15 @@ vim.g.maplocalleader 	= "\\"
 -- sync with system clipboard
 vim.opt.clipboard = vim.env.SSH_TTY and "" or "unnamedplus" 
 
--- enable line numbers
+-- enable line numbers (relative + absolute on current line)
 vim.opt.number = true
+vim.opt.relativenumber = true
+
+-- always show the sign column so gitsigns don't shift the text
+vim.opt.signcolumn = "yes"
+
+-- highlight the current line
+vim.opt.cursorline = true
 
 -- make each shift 5 spaces long
 vim.opt.shiftwidth = 5
