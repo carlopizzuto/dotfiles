@@ -214,6 +214,13 @@ return {
 			"MunifTanjim/nui.nvim",
 		},
 		cmd = "Neotree",
+		init = function()
+			vim.api.nvim_create_autocmd("VimEnter", {
+				callback = function()
+					vim.schedule(function() vim.cmd("Neotree show") end)
+				end,
+			})
+		end,
 		opts = {
 			sources = { "filesystem", "buffers", "git_status" },
 			source_selector = {
