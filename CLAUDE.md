@@ -38,6 +38,8 @@ Standard lazy.nvim structure:
 ### Window Managers
 
 - `sway/config` — sway (Wayland) config for Arch Linux
+- `sway/scripts/screenshot.py` — macOS-inspired screenshot tool (GTK3 + layer-shell). Modes: region, window, screen, all, menu (toolbar). Features: auto-save to `~/Pictures/Screenshots/`, clipboard copy, floating thumbnail preview, click-to-edit (swappy), drag-to-drop (ripdrag), timer countdown. Keybinds: `$mod+s` region, `$mod+Ctrl+s` toolbar, `Print` fullscreen.
+- `sway/scripts/volume-osd.py` — GTK3 layer-shell volume OSD triggered by PulseAudio events
 - `i3/config` — legacy i3wm config (migrated to sway)
 - `i3blocks/` — i3blocks status bar configs (`config-main`, `config-portrait` for multi-monitor)
 - `aerospace/aerospace.toml` — Aerospace WM config for macOS

@@ -126,8 +126,12 @@ bindsym $mod+space exec --no-startup-id rofi -show drun
 # rofi calculator (spotlight-like)
 bindsym $mod+c exec --no-startup-id "rofi -show calc -modi calc -no-show-match -no-sort"
 
-# Screenshot
-bindsym $mod+s exec grim -g "$(slurp)" - | swappy -f -
+# Screenshot — region select (quick)
+bindsym $mod+s exec ~/.config/sway/scripts/screenshot.py region
+# Screenshot — capture toolbar (all modes + timer)
+bindsym $mod+Ctrl+s exec ~/.config/sway/scripts/screenshot.py menu
+# Screenshot — fullscreen (focused output)
+bindsym Print exec ~/.config/sway/scripts/screenshot.py screen
 
 # Clipboard manager
 bindsym $mod+Shift+v exec cliphist list | wofi --dmenu | cliphist decode | wl-copy
