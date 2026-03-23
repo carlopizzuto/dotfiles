@@ -1,10 +1,8 @@
 # Shared
 ### Nvim
-- When closing a file from buffertabs, open the next one/empty buffer if no others
-- Make buffertabs NOT expand into claude code; claude code window should be like file editor window
+- When closing a file from buffertabs, open the next one/empty buffer if no others; currently, file exporer window expands, new files are opened on CC window
 - See if there is a way to save 'layouts' for dirs; opekns the same buffers, etc.
 #### Claude Code
-- Save model + effort to conversation session
 - Figure out how to copy to clipboard inside of nvim while SSHd
 - Relace 'Chat Preview' with the session name in session picker
 - When creating a new session (<leader>an):
