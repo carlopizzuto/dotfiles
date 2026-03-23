@@ -86,22 +86,22 @@ def capture(mode: str) -> str | None:
             ).strip()
             if not region:
                 return None
-            subprocess.run(["grim", "-s", "1", "-g", region, str(path)], check=True)
+            subprocess.run(["grim", "-s", "2", "-g", region, str(path)], check=True)
 
         elif mode == "window":
             geo = _focused_window_geo()
             if not geo:
                 return None
-            subprocess.run(["grim", "-s", "1", "-g", geo, str(path)], check=True)
+            subprocess.run(["grim", "-s", "2", "-g", geo, str(path)], check=True)
 
         elif mode == "screen":
             output = _focused_output_name()
             if not output:
                 return None
-            subprocess.run(["grim", "-s", "1", "-o", output, str(path)], check=True)
+            subprocess.run(["grim", "-s", "2", "-o", output, str(path)], check=True)
 
         elif mode == "all":
-            subprocess.run(["grim", "-s", "1", str(path)], check=True)
+            subprocess.run(["grim", "-s", "2", str(path)], check=True)
 
         else:
             return None
