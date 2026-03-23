@@ -348,7 +348,7 @@ local function build_opts(config, env_table, should_focus, count)
 			width = config.split_width_percentage,
 			height = 0,
 			relative = "editor",
-			wo = { winfixwidth = true, wrap = true },
+			wo = { winfixwidth = true, wrap = true, winbar = "" },
 			keys = {
 				term_normal = false,
 				claude_new_line = {

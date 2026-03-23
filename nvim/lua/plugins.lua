@@ -24,7 +24,6 @@ return {
 				local tab_id = vim.api.nvim_get_current_tabpage()
 				local info = provider.active_session_info and provider.active_session_info(tab_id)
 				local name = info and info.name or ""
-				-- Truncate based on window width, leaving room for the session count
 				local max = math.floor(vim.api.nvim_win_get_width(0) * 0.7)
 				if #name > max then name = name:sub(1, max) .. "..." end
 				return name
@@ -79,6 +78,7 @@ return {
 				},
 				sections = {
 					lualine_a = { "mode" },
+
 					lualine_b = { "branch", "diff", "diagnostics" },
 					lualine_c = { "filename" },
 					lualine_x = { "encoding", "fileformat", "filetype" },
@@ -116,6 +116,7 @@ return {
 				diagnostics = "nvim_lsp",
 				offsets = {
 					{ filetype = "neo-tree", text = "File Explorer", highlight = "Directory", separator = true },
+					{ filetype = "snacks_terminal", text = "Claude Code", highlight = "Directory", separator = true },
 				},
 				show_close_icon = false,
 				separator_style = "slant",
