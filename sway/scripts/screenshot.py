@@ -74,37 +74,57 @@ SLURP_ARGS = [
 # ══════════════════════════════════════════════════════════════════════════════
 
 def capture(mode: str) -> str | None:
-    """Take a screenshot. Returns filepath on success, None on cancel/error."""
+    """Capture screenshot, open satty for annotation, return saved path."""
     SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     path = SCREENSHOT_DIR / f"screenshot-{ts}.png"
 
     try:
+        # Build grim command (output to stdout for piping to satty)
         if mode == "region":
             region = subprocess.check_output(
                 ["slurp"] + SLURP_ARGS, text=True, stderr=subprocess.DEVNULL
             ).strip()
             if not region:
                 return None
-            subprocess.run(["grim", "-s", "2", "-g", region, str(path)], check=True)
+            grim_cmd = ["grim", "-s", "2", "-g", region, "-"]
 
         elif mode == "window":
             geo = _focused_window_geo()
             if not geo:
                 return None
-            subprocess.run(["grim", "-s", "2", "-g", geo, str(path)], check=True)
+            grim_cmd = ["grim", "-s", "2", "-g", geo, "-"]
 
         elif mode == "screen":
             output = _focused_output_name()
             if not output:
                 return None
-            subprocess.run(["grim", "-s", "2", "-o", output, str(path)], check=True)
+            grim_cmd = ["grim", "-s", "2", "-o", output, "-"]
 
         elif mode == "all":
-            subprocess.run(["grim", "-s", "2", str(path)], check=True)
+            grim_cmd = ["grim", "-s", "2", "-"]
 
         else:
             return None
+
+        # Pipe grim → satty for annotation
+        grim_proc = subprocess.Popen(grim_cmd, stdout=subprocess.PIPE)
+        subprocess.run(
+            [
+                "satty",
+                "-f", "-",
+                "-o", str(path),
+                "--copy-command", "wl-copy",
+                "--early-exit",
+                "--actions-on-enter", "save-to-clipboard",
+                "--actions-on-enter", "save-to-file",
+                "--actions-on-enter", "exit",
+                "--font-family", "Iosevka Nerd Font",
+            ],
+            stdin=grim_proc.stdout,
+            check=True,
+        )
+        grim_proc.wait()
 
     except (subprocess.CalledProcessError, KeyboardInterrupt):
         return None
@@ -338,10 +358,17 @@ class ThumbnailOverlay:
         GLib.timeout_add(300, self._quit)
 
     def _open_editor(self):
-        """Open in swappy for annotation."""
+        """Re-open in satty for further annotation."""
         self._win.hide()
         subprocess.Popen(
-            ["swappy", "-f", self._filepath],
+            [
+                "satty",
+                "-f", self._filepath,
+                "-o", self._filepath,
+                "--copy-command", "wl-copy",
+                "--early-exit",
+                "--font-family", "Iosevka Nerd Font",
+            ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -726,7 +753,6 @@ def main():
         if not filepath:
             Gtk.main_quit()
             return
-        copy_to_clipboard(filepath)
         show_thumbnail(filepath)
 
     # ── Timed capture ─────────────────────────────────────────────────────
@@ -738,7 +764,6 @@ def main():
         filepath = capture(args.mode)
         if not filepath:
             sys.exit(0)
-        copy_to_clipboard(filepath)
         _kill_existing()
         _write_pid()
 
