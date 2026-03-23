@@ -55,24 +55,22 @@ exec --no-startup-id nm-applet
 # Wallpapers are set via 'output ... bg' directives in the UI CUSTOMIZATION section
 
 # Idle + lock (5 min → lock, 20 min in lock → screen off)
-exec_always killall -q swayidle; sleep 0.2 && swayidle -w \
-  timeout 300 '~/.local/bin/lock.sh' \
-  before-sleep '~/.local/bin/lock.sh'
+exec_always 'killall -q swayidle; sleep 0.2 && swayidle -w timeout 300 ~/.local/bin/lock.sh before-sleep ~/.local/bin/lock.sh'
 
 # Bar
-exec_always killall -q waybar; sleep 1 && waybar
+exec_always 'killall -q waybar; sleep 1 && waybar'
 
 # Notifications
-exec_always killall -q mako; sleep 0.2 && mako
+exec_always 'killall -q mako; sleep 0.2 && mako'
 
 # Volume OSD
 exec_always ~/.config/sway/scripts/volume-osd.py
 
 # Clipboard history
-exec_always killall -q wl-paste; sleep 0.2 && wl-paste --watch cliphist store
+exec_always 'killall -q wl-paste; sleep 0.2 && wl-paste --watch cliphist store'
 
 # Ollama start; local LLM server
-exec_always killall -q ollama; sleep 0.2 && ollama serve
+exec_always 'killall -q ollama; sleep 0.2 && ollama serve'
 
 
 # ======================================
