@@ -34,6 +34,8 @@ Standard lazy.nvim structure:
 - `nvim/lua/config/` — `lazy.lua` (plugin manager bootstrap), `options.lua`, `keymaps.lua`
 - `nvim/lua/plugins.lua` — plugin specs
 - `nvim/lua/colorschemes/` — theme configs (gruvbox, kanagawa, nordic)
+- `nvim/lua/claudecode_provider.lua` — multi-session terminal provider for claudecode.nvim (session lifecycle, persistence, MCP routing)
+- `nvim/lua/claudecode_status.lua` — reads Claude Code statusline cache files from `/tmp` and exposes lualine components (context window %, token count, API usage %, reset date)
 
 ### Window Managers
 
@@ -52,6 +54,10 @@ Standard lazy.nvim structure:
   - `power-menu.sh` — GTK popup menu (Sound, Bluetooth, Restart, Shutdown, Logout)
   - `power-popup.py` — GTK3 layer-shell popup with transparent backdrop for click-outside dismiss
   - `power-countdown.py` — GTK3 countdown popup (60s) for Restart/Shutdown/Logout with cancel support
+
+### Scripts
+
+- `scripts/claude-statusline.sh` — Claude Code statusline command. Receives session JSON on stdin, extracts context/usage data via `jq`, writes to `/tmp/claude_status_<session_id>.json`. Referenced by `~/.claude/settings.json` `statusLine.command`. Requires `jq` on both machines.
 
 ### Terminal & Multiplexer
 

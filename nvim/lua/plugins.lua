@@ -53,13 +53,16 @@ return {
 				return vim.bo.filetype == "snacks_terminal"
 			end
 
+			local cc_status = require("claudecode_status")
+			cc_status.start_polling()
+
 			local claude_extension = {
 				sections = {
 					lualine_a = { "mode" },
 					lualine_b = { claude_model_effort },
 					lualine_c = {},
-					lualine_x = {},
-					lualine_y = {},
+					lualine_x = { cc_status.context_usage or function() return "" end },
+					lualine_y = { cc_status.rate_usage or function() return "" end },
 					lualine_z = {},
 				},
 				filetypes = { "snacks_terminal" },
