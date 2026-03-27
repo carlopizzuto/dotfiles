@@ -50,7 +50,7 @@ Standard lazy.nvim structure:
 
 - `waybar/config.jsonc` — Waybar config (Gruvbox Dark theme, two bars: `main` for DP-3, `portrait` for DP-2)
 - `waybar/style.css` — Waybar styling (Gruvbox Dark colors, per-module accents)
-- `waybar/scripts/` — status modules (cpu, gpu, memory, temp, disk) and power menu
+- `waybar/scripts/` — status modules (cpu, gpu, memory, temp — each with a `-simple.sh` variant) and power menu
   - `power-menu.sh` — GTK popup menu (Sound, Bluetooth, Restart, Shutdown, Logout)
   - `power-popup.py` — GTK3 layer-shell popup with transparent backdrop for click-outside dismiss
   - `power-countdown.py` — GTK3 countdown popup (60s) for Restart/Shutdown/Logout with cancel support
@@ -63,6 +63,7 @@ Standard lazy.nvim structure:
 
 - `kitty/kitty.conf` — Kitty terminal config (with `themes/` subdir). Includes a `map shift+enter` that sends the CSI u sequence (`\x1b[13;2u`) so Shift+Enter works inside tmux (tmux doesn't support the kitty keyboard protocol natively).
 - `tmux/tmux.conf` — tmux config (plugins dir is gitignored, managed by TPM). Uses `extended-keys always` and `allow-passthrough on` for better key/sequence forwarding.
+- `tmux/gitmux.conf` — gitmux config (git status symbols for tmux statusline)
 
 ## Symlink conventions
 
@@ -76,9 +77,14 @@ ln -sf ~/.dotfiles/tmux/tmux.conf ~/.config/tmux/tmux.conf
 ln -sf ~/.dotfiles/.zshrc ~/.zshrc
 ```
 
+### Other
+
+- `.Xresources` — X11 cursor size config
+
 ## Gitignored files
 
 - `.zshrc.local` — machine-local shell overrides
 - `nvim/lazy-lock.json` — plugin lockfile
 - `tmux/plugins/` — TPM-managed plugins
 - `.zsh_plugins.zsh` — Antidote-generated file (regenerated from `.zsh_plugins.txt`)
+- `sway/config.bak` — sway config backup
