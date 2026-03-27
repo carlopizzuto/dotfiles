@@ -12,7 +12,11 @@ if [[ -z "$TMUX" && $- == *i* && -z "$INSIDE_EMACS" && -z "$VSCODE_RESOLVING_ENV
   if [[ -n "$unattached" ]]; then
     exec tmux attach -t "$unattached"
   else
-    exec tmux new-session
+    if tmux has-session -t "=${HOST%%.*}" 2>/dev/null; then
+      exec tmux new-session
+    else
+      exec tmux new-session -s "${HOST%%.*}"
+    fi
   fi
 fi
 
@@ -82,7 +86,13 @@ setopt HIST_IGNORE_DUPS HIST_FIND_NO_DUPS SHARE_HISTORY INC_APPEND_HISTORY EXTEN
 # 5.  Minimal prompt with Git branch
 # ---------------------------------------------------------------------------
 autoload -Uz vcs_info
-precmd() { vcs_info }
+precmd() {
+  vcs_info
+  # Set terminal title to cwd (tmux reads as pane_title; passes through SSH)
+  printf '\e]2;%s\e\\' "${PWD/#$HOME/~}"
+  # Update host indicator for tmux status bar (local only, not over SSH)
+  [[ -n "$TMUX" ]] && tmux set -qp @pane_host "${HOST%%.*}"
+}
 setopt PROMPT_SUBST
 PROMPT='%F{blue}%n@%m%f %F{green}%~%f ${vcs_info_msg_0_}%# '
 zstyle ':vcs_info:git:*' formats '(%b)'
@@ -118,6 +128,25 @@ alias ..='cd ..'
 alias ...='cd ../..'
 # -- tmux
 alias tmux-cheat='less ~/.config/tmux/CHEATSHEET.md'
+
+# -- ssh: label tmux window + host indicator with SSH target
+ssh() {
+  if [[ -n "$TMUX" ]]; then
+    local h="" skip=false
+    for a in "$@"; do
+      $skip && { skip=false; continue; }
+      case $a in
+        -[bcDEeFIiJLlmOopQRSWw]) skip=true ;;
+        -*) ;;
+        *) [[ -z "$h" ]] && h=$a ;;
+      esac
+    done
+    h=${h#*@}
+    [[ -n "$h" ]] && { tmux rename-window "$h"; tmux set -qp @pane_host "$h"; }
+  fi
+  command ssh "$@"
+  [[ -n "$TMUX" ]] && { tmux set-window-option automatic-rename on; tmux set -qp @pane_host "${HOST%%.*}"; }
+}
 
 # ---------------------------------------------------------------------------
 # 8.  Keybinds & Kitty clear

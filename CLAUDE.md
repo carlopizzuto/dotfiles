@@ -27,6 +27,8 @@ Plugin manager: **Antidote** (sourced from `~/.antidote/antidote.zsh`). Plugins 
 
 Shell startup auto-pulls this repo in the background (`git pull --ff-only`).
 
+`precmd` sets the terminal title (OSC 2) to the cwd for tmux `pane_title` display (works through SSH). An `ssh()` wrapper function auto-labels tmux windows and the `@pane_host` pane option with the SSH target hostname; on exit, it restores `automatic-rename` and the local hostname. First tmux session is named after the hostname; subsequent sessions auto-number.
+
 ### Neovim
 
 Standard lazy.nvim structure:
@@ -62,7 +64,7 @@ Standard lazy.nvim structure:
 ### Terminal & Multiplexer
 
 - `kitty/kitty.conf` — Kitty terminal config (with `themes/` subdir). Includes a `map shift+enter` that sends the CSI u sequence (`\x1b[13;2u`) so Shift+Enter works inside tmux (tmux doesn't support the kitty keyboard protocol natively).
-- `tmux/tmux.conf` — tmux config (plugins dir is gitignored, managed by TPM). Uses `extended-keys always` and `allow-passthrough on` for better key/sequence forwarding.
+- `tmux/tmux.conf` — tmux config (plugins dir is gitignored, managed by TPM). Uses `extended-keys always` and `allow-passthrough on` for better key/sequence forwarding. Per-host Gruvbox accent via `if-shell` (`uname -s`): macOS = blue (`#83a598`), Arch = yellow (`#fabd2f`). OSC 52 clipboard enabled (`set-clipboard on`) for copy-through-SSH. Status bar right shows `#{@pane_host}` (hostname) and `#{pane_title}` (cwd), both set by the shell's `precmd`/SSH wrapper.
 - `tmux/gitmux.conf` — gitmux config (git status symbols for tmux statusline)
 
 ## Symlink conventions
