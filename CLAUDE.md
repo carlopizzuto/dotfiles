@@ -68,7 +68,7 @@ Standard lazy.nvim structure:
 ### Terminal & Multiplexer
 
 - `kitty/kitty.conf` — Kitty terminal config (with `themes/` subdir). Includes a `map shift+enter` that sends the CSI u sequence (`\x1b[13;2u`) so Shift+Enter works inside tmux (tmux doesn't support the kitty keyboard protocol natively).
-- `tmux/tmux.conf` — tmux config (plugins dir is gitignored, managed by TPM). Uses `extended-keys always` and `allow-passthrough on` for better key/sequence forwarding. Per-host Gruvbox accent via `if-shell` (`uname -s`): macOS = blue (`#83a598`), Arch = yellow (`#fabd2f`). OSC 52 clipboard enabled (`set-clipboard on`) for copy-through-SSH. Status bar right shows `#{@pane_host}` (hostname) and `#{pane_title}` (cwd), both set by the shell's `precmd`/SSH wrapper.
+- `tmux/tmux.conf` — tmux config (plugins dir is gitignored, managed by TPM). Uses `extended-keys always` and `allow-passthrough on` for better key/sequence forwarding. Per-host Gruvbox accent via `if-shell` (`uname -s`): macOS = blue (`#83a598`), Arch = yellow (`#fabd2f`). OSC 52 clipboard enabled (`set-clipboard on`) for copy-through-SSH. Status bar right shows `#{@pane_host}` (hostname) and `#{pane_title}` (cwd), both set by the shell's `precmd`/SSH wrapper. Nested tmux: F12 toggles outer passthrough (collapses bar to red `NESTED` indicator, all keys forward to inner session); inner tmux (detected via `SSH_CONNECTION`) uses bottom bar with Gruvbox purple (`#d3869b`) accent and simplified status.
 - `tmux/gitmux.conf` — gitmux config (git status symbols for tmux statusline)
 
 ## Symlink conventions
