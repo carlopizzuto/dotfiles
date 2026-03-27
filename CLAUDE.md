@@ -12,6 +12,10 @@ Personal dotfiles repo managing configs across two machines:
 
 Configs are symlinked from `~/.dotfiles/` into their expected locations (e.g., `~/.config/nvim`, `~/.config/kitty`, `~/.config/sway`).
 
+### Install Script
+
+`install.sh` — cross-platform installer (Arch, Ubuntu/Debian, macOS). Auto-detects platform and headless vs desktop. Handles package installation, plugin manager bootstrapping (Antidote, TPM), gitmux binary download, Nerd Font setup, symlinks, and default shell change. Flags: `--all`, `--core`, `--desktop`, `--symlinks`, `--no-fonts`. Idempotent — safe to re-run.
+
 ## Architecture
 
 ### Zsh (split config)

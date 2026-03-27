@@ -224,17 +224,22 @@ Split config architecture — see [Shell Architecture](#shell-architecture) abov
 ## Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/yourusername/dotfiles.git ~/.dotfiles
-
-# Create symlinks
-ln -sf ~/.dotfiles/nvim ~/.config/nvim
-ln -sf ~/.dotfiles/kitty ~/.config/kitty
-ln -sf ~/.dotfiles/sway ~/.config/sway
-ln -sf ~/.dotfiles/waybar ~/.config/waybar
-ln -sf ~/.dotfiles/tmux/tmux.conf ~/.config/tmux/tmux.conf
-ln -sf ~/.dotfiles/.zshrc ~/.zshrc
+cd ~/.dotfiles
+./install.sh          # auto-detects platform and headless vs desktop
 ```
+
+The installer handles everything: packages, plugin managers (Antidote, TPM), gitmux, Nerd Fonts, symlinks, and default shell.
+
+| Flag | What it does |
+|------|-------------|
+| `--all` | Full install (core + desktop + fonts) |
+| `--core` | Core CLI only (zsh, tmux, nvim — good for servers) |
+| `--desktop` | Desktop/GUI packages only |
+| `--symlinks` | Just redo symlinks, skip package installs |
+| `--no-fonts` | Skip Nerd Font installation |
+
+No flags = auto-detect. Headless server gets `--core`, machine with a display gets `--all`.
 
 Machine-local overrides go in `~/.zshrc.local` (gitignored).
 
