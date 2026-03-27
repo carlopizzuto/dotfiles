@@ -24,6 +24,7 @@ import os
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
@@ -59,13 +60,25 @@ YELLOW = (0.980, 0.741, 0.184)
 BORDER = (0.314, 0.286, 0.271)
 GRAY = (0.573, 0.514, 0.455)
 
-# slurp region-select styling
-SLURP_ARGS = [
-    "-d",               # show dimensions
-    "-b", "18181880",   # dark overlay
-    "-c", "fabd2fff",   # yellow border
-    "-s", "fabd2f15",   # subtle yellow fill
-    "-w", "2",          # border width
+# Region selector
+HANDLE_RADIUS = 5
+HANDLE_HIT = 9       # hit-test radius (slightly larger than visual)
+MIN_SELECTION = 10    # minimum selection dimension in logical px
+GRIM_SCALE = "2"      # capture scale factor
+OVERLAY_ALPHA = 0.5   # dimming over non-selected area
+HANDLE_CURSORS = [
+    "nw-resize", "n-resize", "ne-resize", "e-resize",
+    "se-resize", "s-resize", "sw-resize", "w-resize",
+]
+
+# Satty annotation args (shared across modes)
+SATTY_ARGS = [
+    "--copy-command", "wl-copy",
+    "--early-exit",
+    "--actions-on-enter", "save-to-clipboard",
+    "--actions-on-enter", "save-to-file",
+    "--actions-on-enter", "exit",
+    "--font-family", "Iosevka Nerd Font",
 ]
 
 
@@ -78,53 +91,41 @@ def capture(mode: str) -> str | None:
     SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     path = SCREENSHOT_DIR / f"screenshot-{ts}.png"
+    satty_cmd = ["satty", "-o", str(path)] + SATTY_ARGS
 
     try:
-        # Build grim command (output to stdout for piping to satty)
         if mode == "region":
-            region = subprocess.check_output(
-                ["slurp"] + SLURP_ARGS, text=True, stderr=subprocess.DEVNULL
-            ).strip()
-            if not region:
+            tmp = _region_select()
+            if not tmp:
                 return None
-            grim_cmd = ["grim", "-s", "2", "-g", region, "-"]
-
-        elif mode == "window":
-            geo = _focused_window_geo()
-            if not geo:
-                return None
-            grim_cmd = ["grim", "-s", "2", "-g", geo, "-"]
-
-        elif mode == "screen":
-            output = _focused_output_name()
-            if not output:
-                return None
-            grim_cmd = ["grim", "-s", "2", "-o", output, "-"]
-
-        elif mode == "all":
-            grim_cmd = ["grim", "-s", "2", "-"]
+            try:
+                subprocess.run(satty_cmd + ["-f", tmp], check=True)
+            finally:
+                os.unlink(tmp)
 
         else:
-            return None
+            if mode == "window":
+                geo = _focused_window_geo()
+                if not geo:
+                    return None
+                grim_cmd = ["grim", "-s", GRIM_SCALE, "-g", geo, "-"]
+            elif mode == "screen":
+                output = _focused_output_name()
+                if not output:
+                    return None
+                grim_cmd = ["grim", "-s", GRIM_SCALE, "-o", output, "-"]
+            elif mode == "all":
+                grim_cmd = ["grim", "-s", GRIM_SCALE, "-"]
+            else:
+                return None
 
-        # Pipe grim → satty for annotation
-        grim_proc = subprocess.Popen(grim_cmd, stdout=subprocess.PIPE)
-        subprocess.run(
-            [
-                "satty",
-                "-f", "-",
-                "-o", str(path),
-                "--copy-command", "wl-copy",
-                "--early-exit",
-                "--actions-on-enter", "save-to-clipboard",
-                "--actions-on-enter", "save-to-file",
-                "--actions-on-enter", "exit",
-                "--font-family", "Iosevka Nerd Font",
-            ],
-            stdin=grim_proc.stdout,
-            check=True,
-        )
-        grim_proc.wait()
+            grim_proc = subprocess.Popen(grim_cmd, stdout=subprocess.PIPE)
+            subprocess.run(
+                satty_cmd + ["-f", "-"],
+                stdin=grim_proc.stdout,
+                check=True,
+            )
+            grim_proc.wait()
 
     except (subprocess.CalledProcessError, KeyboardInterrupt):
         return None
@@ -180,6 +181,366 @@ def copy_to_clipboard(filepath: str):
             )
     except OSError:
         pass
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Region Selector (replaces slurp — adds resize/move handles)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _region_select() -> str | None:
+    """Interactive region selection with resize handles. Returns temp image path."""
+    output = _focused_output_name()
+    if not output:
+        return None
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+    tmp.close()
+
+    try:
+        subprocess.run(
+            ["grim", "-s", GRIM_SCALE, "-o", output, tmp.name], check=True
+        )
+    except subprocess.CalledProcessError:
+        os.unlink(tmp.name)
+        return None
+
+    region = RegionSelector(tmp.name).run()
+    if not region:
+        os.unlink(tmp.name)
+        return None
+
+    # Crop to selected region
+    rx, ry, rw, rh = region
+    full = GdkPixbuf.Pixbuf.new_from_file(tmp.name)
+    iw, ih = full.get_width(), full.get_height()
+    rx = max(0, min(rx, iw - 1))
+    ry = max(0, min(ry, ih - 1))
+    rw = min(rw, iw - rx)
+    rh = min(rh, ih - ry)
+
+    cropped = GdkPixbuf.Pixbuf.new(
+        GdkPixbuf.Colorspace.RGB, full.get_has_alpha(), 8, rw, rh
+    )
+    full.copy_area(rx, ry, rw, rh, cropped, 0, 0)
+    cropped.savev(tmp.name, "png", [], [])
+    return tmp.name
+
+
+class RegionSelector:
+    """Fullscreen overlay for drawing, resizing, and moving a selection."""
+
+    def __init__(self, image_path: str):
+        self._full_pb = GdkPixbuf.Pixbuf.new_from_file(image_path)
+        self._display_pb = None
+        self._result = None
+        self._win_w = self._win_h = 0
+        self._sx = self._sy = 1.0
+
+        # Selection: [x, y, w, h] in window (logical) coords
+        self._sel = None
+        self._state = "idle"  # idle | drawing | ready | moving | resizing
+        self._drag_start = None
+        self._drag_sel = None
+        self._handle = None
+
+        self._build_ui()
+
+    def run(self) -> tuple[int, int, int, int] | None:
+        """Block until confirm/cancel. Returns (x,y,w,h) in image pixels."""
+        Gtk.main()
+        return self._result
+
+    def _build_ui(self):
+        win = Gtk.Window()
+        vis = win.get_screen().get_rgba_visual()
+        if vis:
+            win.set_visual(vis)
+        win.set_app_paintable(True)
+
+        GtkLayerShell.init_for_window(win)
+        GtkLayerShell.set_layer(win, GtkLayerShell.Layer.OVERLAY)
+        for edge in (
+            GtkLayerShell.Edge.TOP, GtkLayerShell.Edge.BOTTOM,
+            GtkLayerShell.Edge.LEFT, GtkLayerShell.Edge.RIGHT,
+        ):
+            GtkLayerShell.set_anchor(win, edge, True)
+        GtkLayerShell.set_namespace(win, "screenshot-select")
+        GtkLayerShell.set_keyboard_mode(
+            win, GtkLayerShell.KeyboardMode.EXCLUSIVE
+        )
+
+        area = Gtk.DrawingArea()
+        area.set_events(
+            Gdk.EventMask.BUTTON_PRESS_MASK
+            | Gdk.EventMask.BUTTON_RELEASE_MASK
+            | Gdk.EventMask.POINTER_MOTION_MASK
+        )
+        area.connect("draw", self._on_draw)
+        area.connect("button-press-event", self._on_press)
+        area.connect("button-release-event", self._on_release)
+        area.connect("motion-notify-event", self._on_motion)
+        area.connect("realize", self._on_realize)
+
+        win.add(area)
+        win.connect("key-press-event", self._on_key)
+        win.show_all()
+        self._win = win
+        self._area = area
+
+    def _on_realize(self, widget):
+        alloc = widget.get_allocation()
+        self._win_w = alloc.width
+        self._win_h = alloc.height
+        self._display_pb = self._full_pb.scale_simple(
+            self._win_w, self._win_h, GdkPixbuf.InterpType.BILINEAR
+        )
+        self._sx = self._full_pb.get_width() / self._win_w
+        self._sy = self._full_pb.get_height() / self._win_h
+        cursor = Gdk.Cursor.new_from_name(widget.get_display(), "crosshair")
+        widget.get_window().set_cursor(cursor)
+
+    # ── Drawing ───────────────────────────────────────────────────────────
+
+    def _on_draw(self, _widget, cr):
+        if not self._display_pb:
+            return False
+
+        # Frozen screenshot
+        Gdk.cairo_set_source_pixbuf(cr, self._display_pb, 0, 0)
+        cr.paint()
+
+        # Dark overlay
+        cr.set_source_rgba(0, 0, 0, OVERLAY_ALPHA)
+        cr.rectangle(0, 0, self._win_w, self._win_h)
+        cr.fill()
+
+        if not self._sel:
+            return True
+
+        x, y, w, h = self._sel
+
+        # Clear selection (show original brightness)
+        cr.save()
+        cr.rectangle(x, y, w, h)
+        cr.clip()
+        Gdk.cairo_set_source_pixbuf(cr, self._display_pb, 0, 0)
+        cr.paint()
+        cr.restore()
+
+        # Selection border
+        cr.set_source_rgba(*YELLOW, 1.0)
+        cr.rectangle(x + 0.5, y + 0.5, w - 1, h - 1)
+        cr.set_line_width(2)
+        cr.stroke()
+
+        # Resize handles
+        if self._state in ("ready", "moving", "resizing"):
+            hr = HANDLE_RADIUS
+            for hx, hy in self._handles():
+                cr.set_source_rgba(1, 1, 1, 0.9)
+                cr.rectangle(hx - hr, hy - hr, hr * 2, hr * 2)
+                cr.fill()
+                cr.set_source_rgba(*YELLOW, 1.0)
+                cr.rectangle(hx - hr + 0.5, hy - hr + 0.5,
+                             hr * 2 - 1, hr * 2 - 1)
+                cr.set_line_width(1)
+                cr.stroke()
+
+        # Dimension label
+        img_w = int(w * self._sx)
+        img_h = int(h * self._sy)
+        dim = f"{img_w} \u00d7 {img_h}"
+        cr.select_font_face(
+            "Iosevka Nerd Font",
+            cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL,
+        )
+        cr.set_font_size(14)
+        ext = cr.text_extents(dim)
+        tx = x + (w - ext.width) / 2
+        ty = (y - 10) if y > 28 else (y + h + 20)
+
+        cr.set_source_rgba(*BG, 0.8)
+        _rounded_rect(cr, tx - 8, ty - ext.height - 4,
+                       ext.width + 16, ext.height + 8, 4)
+        cr.fill()
+        cr.set_source_rgba(*FG, 0.9)
+        cr.move_to(tx, ty)
+        cr.show_text(dim)
+
+        return True
+
+    # ── Handle geometry ───────────────────────────────────────────────────
+
+    def _handles(self):
+        """8 positions: TL, TC, TR, RC, BR, BC, BL, LC."""
+        x, y, w, h = self._sel
+        mx, my = x + w / 2, y + h / 2
+        return [
+            (x, y), (mx, y), (x + w, y), (x + w, my),
+            (x + w, y + h), (mx, y + h), (x, y + h), (x, my),
+        ]
+
+    def _hit_handle(self, mx, my):
+        if not self._sel:
+            return None
+        for i, (hx, hy) in enumerate(self._handles()):
+            if abs(mx - hx) < HANDLE_HIT and abs(my - hy) < HANDLE_HIT:
+                return i
+        return None
+
+    def _inside(self, mx, my):
+        if not self._sel:
+            return False
+        x, y, w, h = self._sel
+        return x <= mx <= x + w and y <= my <= y + h
+
+    # ── Mouse ─────────────────────────────────────────────────────────────
+
+    def _on_press(self, _widget, event):
+        if event.button != 1:
+            return True
+        mx, my = event.x, event.y
+        self._drag_start = (mx, my)
+
+        handle = self._hit_handle(mx, my)
+        if handle is not None:
+            self._state = "resizing"
+            self._handle = handle
+            self._drag_sel = list(self._sel)
+        elif self._inside(mx, my):
+            self._state = "moving"
+            self._drag_sel = list(self._sel)
+        else:
+            self._state = "drawing"
+            self._sel = [mx, my, 0, 0]
+        return True
+
+    def _on_release(self, _widget, event):
+        if event.button != 1:
+            return True
+        if self._sel:
+            self._normalize()
+            if self._sel[2] >= MIN_SELECTION and self._sel[3] >= MIN_SELECTION:
+                self._state = "ready"
+            else:
+                self._sel = None
+                self._state = "idle"
+        else:
+            self._state = "idle"
+        self._area.queue_draw()
+        self._update_cursor(event.x, event.y)
+        return True
+
+    def _on_motion(self, _widget, event):
+        mx, my = event.x, event.y
+
+        if self._state == "drawing":
+            sx, sy = self._drag_start
+            self._sel = [min(sx, mx), min(sy, my),
+                         abs(mx - sx), abs(my - sy)]
+            self._area.queue_draw()
+
+        elif self._state == "moving":
+            dx = mx - self._drag_start[0]
+            dy = my - self._drag_start[1]
+            ox, oy, ow, oh = self._drag_sel
+            nx = max(0, min(ox + dx, self._win_w - ow))
+            ny = max(0, min(oy + dy, self._win_h - oh))
+            self._sel = [nx, ny, ow, oh]
+            self._area.queue_draw()
+
+        elif self._state == "resizing":
+            dx = mx - self._drag_start[0]
+            dy = my - self._drag_start[1]
+            self._apply_resize(dx, dy)
+            self._area.queue_draw()
+
+        else:
+            self._update_cursor(mx, my)
+
+        return True
+
+    def _apply_resize(self, dx, dy):
+        ox, oy, ow, oh = self._drag_sel
+        h = self._handle
+        x, y, w, ht = ox, oy, ow, oh
+
+        if h in (0, 6, 7):
+            x += dx; w -= dx
+        if h in (2, 3, 4):
+            w += dx
+        if h in (0, 1, 2):
+            y += dy; ht -= dy
+        if h in (4, 5, 6):
+            ht += dy
+
+        self._sel = [x, y, w, ht]
+
+    def _normalize(self):
+        x, y, w, h = self._sel
+        if w < 0:
+            x += w; w = -w
+        if h < 0:
+            y += h; h = -h
+        x = max(0, x)
+        y = max(0, y)
+        w = min(w, self._win_w - x)
+        h = min(h, self._win_h - y)
+        self._sel = [x, y, w, h]
+
+    def _update_cursor(self, mx, my):
+        handle = self._hit_handle(mx, my)
+        if handle is not None:
+            name = HANDLE_CURSORS[handle]
+        elif self._inside(mx, my):
+            name = "move"
+        else:
+            name = "crosshair"
+        cursor = Gdk.Cursor.new_from_name(self._area.get_display(), name)
+        self._area.get_window().set_cursor(cursor)
+
+    # ── Keyboard ──────────────────────────────────────────────────────────
+
+    def _on_key(self, _widget, event):
+        key = event.keyval
+        shift = bool(event.state & Gdk.ModifierType.SHIFT_MASK)
+
+        if key == Gdk.KEY_Escape:
+            self._cancel()
+        elif key in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+            self._confirm()
+        elif self._sel and key in (
+            Gdk.KEY_Left, Gdk.KEY_Right, Gdk.KEY_Up, Gdk.KEY_Down,
+        ):
+            step = 10 if shift else 1
+            x, y, w, h = self._sel
+            if key == Gdk.KEY_Left:
+                x = max(0, x - step)
+            elif key == Gdk.KEY_Right:
+                x = min(self._win_w - w, x + step)
+            elif key == Gdk.KEY_Up:
+                y = max(0, y - step)
+            elif key == Gdk.KEY_Down:
+                y = min(self._win_h - h, y + step)
+            self._sel = [x, y, w, h]
+            self._area.queue_draw()
+
+    def _confirm(self):
+        if self._sel and self._sel[2] >= MIN_SELECTION and self._sel[3] >= MIN_SELECTION:
+            x, y, w, h = self._sel
+            self._result = (
+                int(x * self._sx), int(y * self._sy),
+                int(w * self._sx), int(h * self._sy),
+            )
+        self._win.hide()
+        self._win.destroy()
+        Gtk.main_quit()
+
+    def _cancel(self):
+        self._result = None
+        self._win.hide()
+        self._win.destroy()
+        Gtk.main_quit()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
