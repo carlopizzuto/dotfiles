@@ -1,0 +1,52 @@
+{
+    "title": "Swap Ctrl ↔ Cmd (except Terminal apps)",
+    "rules": [
+        {
+            "description": "Swap Left Ctrl ↔ Left Cmd (except Terminal, iTerm2, Alacritty, Kitty, WezTerm, Warp)",
+            "manipulators": [
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "left_control",
+                        "modifiers": { "optional": ["any"] }
+                    },
+                    "to": [{ "key_code": "left_command" }],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_unless",
+                            "bundle_identifiers": [
+                                "^com\\.apple\\.Terminal$",
+                                "^com\\.googlecode\\.iterm2$",
+                                "^io\\.alacritty$",
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.github\\.wez\\.wezterm$",
+                                "^dev\\.warp\\.Warp-Stable$"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "left_command",
+                        "modifiers": { "optional": ["any"] }
+                    },
+                    "to": [{ "key_code": "left_control" }],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_unless",
+                            "bundle_identifiers": [
+                                "^com\\.apple\\.Terminal$",
+                                "^com\\.googlecode\\.iterm2$",
+                                "^io\\.alacritty$",
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^com\\.github\\.wez\\.wezterm$",
+                                "^dev\\.warp\\.Warp-Stable$"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

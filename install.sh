@@ -206,7 +206,7 @@ install_desktop() {
                  gtk-layer-shell thunar 2>/dev/null || warn "Some desktop packages unavailable — install manually"
       ;;
     macos)
-      brew install --cask kitty
+      brew install --cask kitty karabiner-elements
       brew tap nikitabobko/tap 2>/dev/null || true
       brew install --cask nikitabobko/tap/aerospace
       ;;
@@ -358,6 +358,8 @@ setup_symlinks() {
   if [[ "$OS" == "darwin" ]]; then
     make_symlink "$DOTFILES_DIR/kitty"                       "$HOME/.config/kitty"
     make_symlink "$DOTFILES_DIR/aerospace/aerospace.toml"    "$HOME/.aerospace.toml"
+    make_symlink "$DOTFILES_DIR/karabiner/assets/complex_modifications/swap-ctrl-cmd.json" \
+                 "$HOME/.config/karabiner/assets/complex_modifications/swap-ctrl-cmd.json"
   fi
 
   ok "Symlinks done"

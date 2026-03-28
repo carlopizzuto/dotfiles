@@ -65,6 +65,10 @@ Standard lazy.nvim structure:
 
 - `scripts/claude-statusline.sh` — Claude Code statusline command. Receives session JSON on stdin, extracts context/usage data via `jq`, writes to `/tmp/claude_status_<session_id>.json`. Referenced by `~/.claude/settings.json` `statusLine.command`. Requires `jq` on both machines.
 
+### Karabiner-Elements (macOS only)
+
+- `karabiner/assets/complex_modifications/swap-ctrl-cmd.json` — Swaps Left Ctrl ↔ Left Cmd everywhere except terminal apps (Terminal, iTerm2, Alacritty, Kitty, WezTerm, Warp). Only the complex modification rules are tracked; `karabiner.json` is managed by the app.
+
 ### Terminal & Multiplexer
 
 - `kitty/kitty.conf` — Kitty terminal config (with `themes/` subdir). Includes a `map shift+enter` that sends the CSI u sequence (`\x1b[13;2u`) so Shift+Enter works inside tmux (tmux doesn't support the kitty keyboard protocol natively).
