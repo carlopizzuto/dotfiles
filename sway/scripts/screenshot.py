@@ -193,28 +193,14 @@ def _region_select() -> str | None:
     if not output:
         return None
 
-    # Capture as PPM (uncompressed) to stdout — avoids slow PNG encode + disk I/O
-    try:
-        raw = subprocess.run(
-            ["grim", "-t", "ppm", "-s", GRIM_SCALE, "-o", output, "-"],
-            capture_output=True, check=True,
-        ).stdout
-    except subprocess.CalledProcessError:
-        return None
-
-    loader = GdkPixbuf.PixbufLoader()
-    loader.write(raw)
-    loader.close()
-    full_pb = loader.get_pixbuf()
-    if not full_pb:
-        return None
-
-    region = RegionSelector(full_pb).run()
-    if not region:
+    selector = RegionSelector(output)
+    region = selector.run()
+    if not region or not selector.full_pb:
         return None
 
     # Crop to selected region
     rx, ry, rw, rh = region
+    full_pb = selector.full_pb
     iw, ih = full_pb.get_width(), full_pb.get_height()
     rx = max(0, min(rx, iw - 1))
     ry = max(0, min(ry, ih - 1))
@@ -235,8 +221,9 @@ def _region_select() -> str | None:
 class RegionSelector:
     """Fullscreen overlay for drawing, resizing, and moving a selection."""
 
-    def __init__(self, pixbuf):
-        self._full_pb = pixbuf
+    def __init__(self, output: str):
+        self._output = output
+        self._full_pb = None
         self._result = None
         self._win_w = self._win_h = 0
         self._sx = self._sy = 1.0
@@ -249,6 +236,10 @@ class RegionSelector:
         self._handle = None
 
         self._build_ui()
+
+    @property
+    def full_pb(self):
+        return self._full_pb
 
     def run(self) -> tuple[int, int, int, int] | None:
         """Block until confirm/cancel. Returns (x,y,w,h) in image pixels."""
@@ -295,22 +286,56 @@ class RegionSelector:
         self._area = area
 
     def _on_realize(self, widget):
-        cursor = Gdk.Cursor.new_from_name(widget.get_display(), "crosshair")
+        cursor = Gdk.Cursor.new_for_display(
+            widget.get_display(), Gdk.CursorType.BLANK_CURSOR
+        )
         widget.get_window().set_cursor(cursor)
+        # Capture after compositor processes the blank cursor
+        GLib.timeout_add(50, self._do_capture)
+
+    def _do_capture(self):
+        try:
+            raw = subprocess.run(
+                ["grim", "-t", "ppm", "-s", GRIM_SCALE,
+                 "-o", self._output, "-"],
+                capture_output=True, check=True,
+            ).stdout
+        except subprocess.CalledProcessError:
+            self._cancel()
+            return False
+
+        loader = GdkPixbuf.PixbufLoader()
+        loader.write(raw)
+        loader.close()
+        self._full_pb = loader.get_pixbuf()
+
+        if self._full_pb and self._win_w:
+            self._sx = self._full_pb.get_width() / self._win_w
+            self._sy = self._full_pb.get_height() / self._win_h
+
+        cursor = Gdk.Cursor.new_from_name(self._area.get_display(), "crosshair")
+        self._area.get_window().set_cursor(cursor)
+        self._area.queue_draw()
+        return False
 
     def _on_size_allocate(self, widget, alloc):
         if alloc.width == self._win_w and alloc.height == self._win_h:
             return
         self._win_w = alloc.width
         self._win_h = alloc.height
-        self._sx = self._full_pb.get_width() / self._win_w
-        self._sy = self._full_pb.get_height() / self._win_h
+        if self._full_pb:
+            self._sx = self._full_pb.get_width() / self._win_w
+            self._sy = self._full_pb.get_height() / self._win_h
 
     # ── Drawing ───────────────────────────────────────────────────────────
 
     def _on_draw(self, _widget, cr):
-        if not self._win_w:
-            return False
+        if not self._full_pb or not self._win_w:
+            # Transparent while capture pending — grim sees through to desktop
+            cr.set_operator(cairo.OPERATOR_SOURCE)
+            cr.set_source_rgba(0, 0, 0, 0)
+            cr.paint()
+            return True
 
         # Frozen screenshot — render full-res, let cairo handle device scaling
         cr.save()
@@ -410,7 +435,7 @@ class RegionSelector:
     # ── Mouse ─────────────────────────────────────────────────────────────
 
     def _on_press(self, _widget, event):
-        if event.button != 1:
+        if event.button != 1 or not self._full_pb:
             return True
         mx, my = event.x, event.y
         self._drag_start = (mx, my)
@@ -445,6 +470,8 @@ class RegionSelector:
         return True
 
     def _on_motion(self, _widget, event):
+        if not self._full_pb:
+            return True
         mx, my = event.x, event.y
 
         if self._state == "drawing":
@@ -520,7 +547,10 @@ class RegionSelector:
 
         if key == Gdk.KEY_Escape:
             self._cancel()
-        elif key in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+            return True
+        if not self._full_pb:
+            return True
+        if key in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
             self._confirm()
         elif self._sel and key in (
             Gdk.KEY_Left, Gdk.KEY_Right, Gdk.KEY_Up, Gdk.KEY_Down,
