@@ -765,14 +765,8 @@ class ThumbnailOverlay:
         """Re-open in satty for further annotation."""
         self._win.hide()
         subprocess.Popen(
-            [
-                "satty",
-                "-f", self._filepath,
-                "-o", self._filepath,
-                "--copy-command", "wl-copy",
-                "--early-exit",
-                "--font-family", "Iosevka Nerd Font",
-            ],
+            ["satty", "-f", self._filepath, "-o", self._filepath]
+            + SATTY_ARGS,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
