@@ -231,7 +231,6 @@ class RegionSelector:
 
     def __init__(self, image_path: str):
         self._full_pb = GdkPixbuf.Pixbuf.new_from_file(image_path)
-        self._display_pb = None
         self._result = None
         self._win_w = self._win_h = 0
         self._sx = self._sy = 1.0
@@ -264,6 +263,7 @@ class RegionSelector:
             GtkLayerShell.Edge.LEFT, GtkLayerShell.Edge.RIGHT,
         ):
             GtkLayerShell.set_anchor(win, edge, True)
+        GtkLayerShell.set_exclusive_zone(win, -1)
         GtkLayerShell.set_namespace(win, "screenshot-select")
         GtkLayerShell.set_keyboard_mode(
             win, GtkLayerShell.KeyboardMode.EXCLUSIVE
@@ -279,6 +279,7 @@ class RegionSelector:
         area.connect("button-press-event", self._on_press)
         area.connect("button-release-event", self._on_release)
         area.connect("motion-notify-event", self._on_motion)
+        area.connect("size-allocate", self._on_size_allocate)
         area.connect("realize", self._on_realize)
 
         win.add(area)
@@ -288,26 +289,30 @@ class RegionSelector:
         self._area = area
 
     def _on_realize(self, widget):
-        alloc = widget.get_allocation()
-        self._win_w = alloc.width
-        self._win_h = alloc.height
-        self._display_pb = self._full_pb.scale_simple(
-            self._win_w, self._win_h, GdkPixbuf.InterpType.BILINEAR
-        )
-        self._sx = self._full_pb.get_width() / self._win_w
-        self._sy = self._full_pb.get_height() / self._win_h
         cursor = Gdk.Cursor.new_from_name(widget.get_display(), "crosshair")
         widget.get_window().set_cursor(cursor)
+
+    def _on_size_allocate(self, widget, alloc):
+        if alloc.width == self._win_w and alloc.height == self._win_h:
+            return
+        self._win_w = alloc.width
+        self._win_h = alloc.height
+        self._sx = self._full_pb.get_width() / self._win_w
+        self._sy = self._full_pb.get_height() / self._win_h
 
     # ── Drawing ───────────────────────────────────────────────────────────
 
     def _on_draw(self, _widget, cr):
-        if not self._display_pb:
+        if not self._win_w:
             return False
 
-        # Frozen screenshot
-        Gdk.cairo_set_source_pixbuf(cr, self._display_pb, 0, 0)
+        # Frozen screenshot — render full-res, let cairo handle device scaling
+        cr.save()
+        cr.scale(1.0 / self._sx, 1.0 / self._sy)
+        Gdk.cairo_set_source_pixbuf(cr, self._full_pb, 0, 0)
+        cr.get_source().set_filter(cairo.Filter.BILINEAR)
         cr.paint()
+        cr.restore()
 
         # Dark overlay
         cr.set_source_rgba(0, 0, 0, OVERLAY_ALPHA)
@@ -323,7 +328,9 @@ class RegionSelector:
         cr.save()
         cr.rectangle(x, y, w, h)
         cr.clip()
-        Gdk.cairo_set_source_pixbuf(cr, self._display_pb, 0, 0)
+        cr.scale(1.0 / self._sx, 1.0 / self._sy)
+        Gdk.cairo_set_source_pixbuf(cr, self._full_pb, 0, 0)
+        cr.get_source().set_filter(cairo.Filter.BILINEAR)
         cr.paint()
         cr.restore()
 
