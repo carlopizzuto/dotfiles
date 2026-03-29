@@ -193,35 +193,41 @@ def _region_select() -> str | None:
     if not output:
         return None
 
-    tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-    tmp.close()
-
+    # Capture as PPM (uncompressed) to stdout — avoids slow PNG encode + disk I/O
     try:
-        subprocess.run(
-            ["grim", "-s", GRIM_SCALE, "-o", output, tmp.name], check=True
-        )
+        raw = subprocess.run(
+            ["grim", "-t", "ppm", "-s", GRIM_SCALE, "-o", output, "-"],
+            capture_output=True, check=True,
+        ).stdout
     except subprocess.CalledProcessError:
-        os.unlink(tmp.name)
         return None
 
-    region = RegionSelector(tmp.name).run()
+    loader = GdkPixbuf.PixbufLoader()
+    loader.write(raw)
+    loader.close()
+    full_pb = loader.get_pixbuf()
+    if not full_pb:
+        return None
+
+    region = RegionSelector(full_pb).run()
     if not region:
-        os.unlink(tmp.name)
         return None
 
     # Crop to selected region
     rx, ry, rw, rh = region
-    full = GdkPixbuf.Pixbuf.new_from_file(tmp.name)
-    iw, ih = full.get_width(), full.get_height()
+    iw, ih = full_pb.get_width(), full_pb.get_height()
     rx = max(0, min(rx, iw - 1))
     ry = max(0, min(ry, ih - 1))
     rw = min(rw, iw - rx)
     rh = min(rh, ih - ry)
 
     cropped = GdkPixbuf.Pixbuf.new(
-        GdkPixbuf.Colorspace.RGB, full.get_has_alpha(), 8, rw, rh
+        GdkPixbuf.Colorspace.RGB, full_pb.get_has_alpha(), 8, rw, rh
     )
-    full.copy_area(rx, ry, rw, rh, cropped, 0, 0)
+    full_pb.copy_area(rx, ry, rw, rh, cropped, 0, 0)
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+    tmp.close()
     cropped.savev(tmp.name, "png", [], [])
     return tmp.name
 
@@ -229,8 +235,8 @@ def _region_select() -> str | None:
 class RegionSelector:
     """Fullscreen overlay for drawing, resizing, and moving a selection."""
 
-    def __init__(self, image_path: str):
-        self._full_pb = GdkPixbuf.Pixbuf.new_from_file(image_path)
+    def __init__(self, pixbuf):
+        self._full_pb = pixbuf
         self._result = None
         self._win_w = self._win_h = 0
         self._sx = self._sy = 1.0
