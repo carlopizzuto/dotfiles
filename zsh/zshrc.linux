@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Linux (Arch) specific configuration
+# Linux-specific configuration (Arch, Ubuntu/Debian)
 # ---------------------------------------------------------------------------
 
 # Conda (system location)
@@ -14,11 +14,15 @@ if [[ -d /opt/miniconda3 ]]; then
 fi
 
 # pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
+if [[ -d "$HOME/.pyenv" ]]; then
+  export PYENV_ROOT="$HOME/.pyenv"
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$(pyenv init -)"
+fi
 
 # vapi
-export VAPI_INSTALL="$HOME/.vapi"
-export PATH="$VAPI_INSTALL/bin:$PATH"
-export MANPATH="$HOME/.vapi/share/man:$MANPATH"
+if [[ -d "$HOME/.vapi" ]]; then
+  export VAPI_INSTALL="$HOME/.vapi"
+  export PATH="$VAPI_INSTALL/bin:$PATH"
+  export MANPATH="$HOME/.vapi/share/man:$MANPATH"
+fi
