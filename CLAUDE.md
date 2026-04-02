@@ -6,9 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Personal dotfiles repo managing configs across two machines:
+Personal dotfiles repo managing configs across three machines:
 - **Arch Linux PC** (primary, sway/Wayland) — AMD 7600X, RTX 4070 Super
 - **MacBook** (macOS, Aerospace WM) — Apple M3 Pro
+- **pallm** (headless Ubuntu VM on Proxmox) — Ryzen 9 9950X, RTX Pro 6000 (LLM inference server)
 
 Configs are symlinked from `~/.dotfiles/` into their expected locations (e.g., `~/.config/nvim`, `~/.config/kitty`, `~/.config/sway`).
 
