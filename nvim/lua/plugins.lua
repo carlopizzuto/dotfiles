@@ -169,6 +169,7 @@ return {
 			stages = "fade_in_slide_out",
 			timeout = 3000,
 			top_down = true,
+			background_colour = "#000000",
 		},
 	},
 	{
@@ -343,7 +344,9 @@ return {
 				"vim", "yaml",
 			},
 		},
-		config = function(_, opts) require("nvim-treesitter.configs").setup(opts) end,
+		config = function(_, opts)
+			require("nvim-treesitter").setup(opts)
+		end,
 	},
 
 
