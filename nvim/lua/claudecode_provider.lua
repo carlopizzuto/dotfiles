@@ -13,6 +13,7 @@ local State = {
 	tabs = {},       -- tab_id -> { sessions = [...], active = number }
 	cmd_cache = nil, -- { cmd, env, config } from last open() call
 	connecting = nil,-- tab_id awaiting connection
+	pending_new = false, -- new_session() requested before cmd_cache ready
 	next_count = 1,  -- unique Snacks terminal count
 	patched = { on_connect = false, on_disconnect = false, broadcast = false },
 }
@@ -509,6 +510,16 @@ function M.open(cmd_string, env_table, config, do_focus)
 		return
 	end
 
+	-- If a new-session-with-prompt was requested before cmd_cache was ready
+	if State.pending_new then
+		State.pending_new = false
+		vim.ui.input({ prompt = "Session name (empty for default): " }, function(input)
+			local name = (input and input ~= "") and input or nil
+			create_session(tab_id, cmd_string, env_table, config, should_focus, name)
+		end)
+		return
+	end
+
 	local s = active_session(tab_id)
 
 	if s and session_is_valid(s) then
@@ -588,6 +599,7 @@ end
 function M.new_session()
 	local cache = State.cmd_cache
 	if not cache then
+		State.pending_new = true
 		vim.cmd("ClaudeCode")
 		return
 	end
