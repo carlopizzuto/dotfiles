@@ -68,6 +68,14 @@ Standard lazy.nvim structure:
 
 - `scripts/claude-statusline.sh` — Claude Code statusline command. Receives session JSON on stdin, extracts context/usage data via `jq`, writes to `/tmp/claude_status_<session_id>.json`. Referenced by `~/.claude/settings.json` `statusLine.command`. Requires `jq` on both machines.
 
+### BWMenuBar (macOS only)
+
+- `bw-menubar/` — Native SwiftUI menubar app for Bitwarden vault access via `rbw`. macOS equivalent of `waybar/scripts/bw-popup.py`.
+  - `Package.swift` — Swift Package (macOS 14+)
+  - `Sources/BWMenuBar/` — App entry, vault list view, rbw service, clipboard helper
+  - `Makefile` — `make build`, `make run`, `make install` (bundles .app + LaunchAgent), `make uninstall`
+  - Requires `rbw` (`brew install rbw`) configured and unlocked
+
 ### Karabiner-Elements (macOS only)
 
 - `karabiner/assets/complex_modifications/swap-ctrl-cmd.json` — Swaps Left Ctrl ↔ Left Cmd everywhere except terminal apps (Terminal, iTerm2, Alacritty, Kitty, WezTerm, Warp). Only the complex modification rules are tracked; `karabiner.json` is managed by the app.
@@ -101,3 +109,4 @@ ln -sf ~/.dotfiles/.zshrc ~/.zshrc
 - `tmux/plugins/` — TPM-managed plugins
 - `.zsh_plugins.zsh` — Antidote-generated file (regenerated from `.zsh_plugins.txt`)
 - `sway/config.bak` — sway config backup
+- `bw-menubar/.build/` — Swift Package Manager build artifacts
