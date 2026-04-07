@@ -332,6 +332,10 @@ local function ensure_patches()
 	end
 end
 
+local function schedule_redraw()
+	vim.schedule(function() vim.cmd("mode") end)
+end
+
 ----------------------------------------------------------------
 --  Terminal creation
 ----------------------------------------------------------------
@@ -454,6 +458,8 @@ local function create_session(tab_id, cmd_string, env_table, config, should_focu
 	else
 		persist_names()
 	end
+
+	schedule_redraw()
 end
 
 ----------------------------------------------------------------
@@ -662,6 +668,8 @@ function M.cycle_session()
 		next_s.instance:toggle()
 		session_focus(next_s)
 	end
+
+	schedule_redraw()
 end
 
 function M.goto_session(n)
@@ -681,6 +689,8 @@ function M.goto_session(n)
 		target.instance:toggle()
 		session_focus(target)
 	end
+
+	schedule_redraw()
 end
 
 function M.list_sessions()
