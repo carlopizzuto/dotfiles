@@ -514,7 +514,8 @@ function M.open(cmd_string, env_table, config, do_focus)
 	if State.pending_new then
 		State.pending_new = false
 		vim.ui.input({ prompt = "Session name (empty for default): " }, function(input)
-			local name = (input and input ~= "") and input or nil
+			if input == nil then return end
+			local name = input ~= "" and input or nil
 			create_session(tab_id, cmd_string, env_table, config, should_focus, name)
 		end)
 		return
@@ -605,7 +606,8 @@ function M.new_session()
 	end
 
 	vim.ui.input({ prompt = "Session name (empty for default): " }, function(input)
-		local name = (input and input ~= "") and input or nil
+		if input == nil then return end
+		local name = input ~= "" and input or nil
 		ensure_patches()
 		local tab_id = vim.api.nvim_get_current_tabpage()
 		local s = active_session(tab_id)
