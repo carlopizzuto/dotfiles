@@ -271,6 +271,8 @@ class BitwardenPopup(Gtk.Window):
         if entry.get("folder"):
             cmd.extend(["--folder", entry["folder"]])
         cmd.append(entry["name"])
+        if entry.get("user"):
+            cmd.append(entry["user"])
 
         try:
             result = subprocess.run(
@@ -295,11 +297,13 @@ class BitwardenPopup(Gtk.Window):
         Gtk.main_quit()
 
     def _copy_to_clipboard(self, text):
-        subprocess.Popen(
-            ["wl-copy", text],
+        proc = subprocess.Popen(
+            ["wl-copy"],
+            stdin=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+        proc.communicate(input=text.encode())
 
     def _schedule_clipboard_clear(self):
         subprocess.Popen(
