@@ -33,9 +33,9 @@ final class RBWService {
                 return ("", Int32(-1))
             }
 
-            process.waitUntilExit()
-
+            // Read before waitUntilExit to avoid pipe buffer deadlock
             let data = stdout.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
             let output = String(data: data, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return (output, process.terminationStatus)

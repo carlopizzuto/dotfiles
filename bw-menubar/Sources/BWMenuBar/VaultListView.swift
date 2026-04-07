@@ -121,7 +121,7 @@ struct VaultListView: View {
                         Button("Copy Username") {
                             guard !entry.user.isEmpty else { return }
                             Clipboard.copyAndClear(entry.user)
-                            dismiss()
+                            closePopover()
                         }
                     }
                 }
@@ -158,7 +158,13 @@ struct VaultListView: View {
     private func copyPassword(for entry: VaultEntry) async {
         guard let password = await service.getPassword(for: entry) else { return }
         Clipboard.copyAndClear(password)
+        closePopover()
+    }
+
+    private func closePopover() {
         dismiss()
+        // Fallback: dismiss() may not be wired for MenuBarExtra(.window)
+        NSApp.keyWindow?.close()
     }
 }
 
