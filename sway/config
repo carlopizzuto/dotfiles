@@ -89,6 +89,7 @@ for_window [app_id="blueman-manager"] floating enable
 for_window [app_id="localsend"] floating enable, sticky enable, resize set 500 600, move position center
 for_window [app_id="cava-visualizer"] resize set height 250 px
 for_window [app_id="com.gabm.satty"] floating enable, resize set 1200 900, move position center
+for_window [app_id="(?i)bitwarden"] floating enable, resize set 1000 750, move position center
 
 
 # ======================================
