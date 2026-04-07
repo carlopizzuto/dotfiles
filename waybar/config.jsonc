@@ -29,6 +29,8 @@
       "custom/sep",
       "disk",
       "custom/sep",
+      "custom/bitwarden",
+      "custom/sep",
       "custom/power"
     ],
 
@@ -82,6 +84,12 @@
 
     "custom/interpunct": {
       "format": "·"
+    },
+
+    "custom/bitwarden": {
+      "format": "󰌋",
+      "tooltip": false,
+      "on-click": "~/.config/waybar/scripts/bw-menu.sh"
     },
 
     "custom/power": {

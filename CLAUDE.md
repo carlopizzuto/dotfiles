@@ -57,10 +57,12 @@ Standard lazy.nvim structure:
 
 - `waybar/config.jsonc` — Waybar config (Gruvbox Dark theme, two bars: `main` for DP-3, `portrait` for DP-2)
 - `waybar/style.css` — Waybar styling (Gruvbox Dark colors, per-module accents)
-- `waybar/scripts/` — status modules (cpu, gpu, memory, temp — each with a `-simple.sh` variant) and power menu
+- `waybar/scripts/` — status modules (cpu, gpu, memory, temp — each with a `-simple.sh` variant), power menu, and Bitwarden popup
   - `power-menu.sh` — GTK popup menu (Sound, Bluetooth, Restart, Shutdown, Logout)
   - `power-popup.py` — GTK3 layer-shell popup with transparent backdrop for click-outside dismiss
   - `power-countdown.py` — GTK3 countdown popup (60s) for Restart/Shutdown/Logout with cancel support
+  - `bw-menu.sh` — Bitwarden vault popup launcher (checks rbw unlock, launches popup)
+  - `bw-popup.py` — GTK3 layer-shell Bitwarden popup (search, copy password/username, clipboard auto-clear)
 
 ### Scripts
 

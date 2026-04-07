@@ -42,6 +42,7 @@ window#waybar {
 #custom-gpu-simple,
 #custom-sep,
 #custom-interpunct,
+#custom-bitwarden,
 #custom-power {
   padding: 0 8px;
 }
@@ -65,6 +66,10 @@ window#waybar {
 #custom-sep,
 #custom-interpunct {
   color: #a89984;
+}
+
+#custom-bitwarden {
+  color: #8ec07c;
 }
 
 #custom-power {
