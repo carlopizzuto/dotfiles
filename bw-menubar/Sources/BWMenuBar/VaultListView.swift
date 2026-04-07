@@ -3,6 +3,7 @@ import SwiftUI
 
 struct VaultListView: View {
     let service: RBWService
+    @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
 
     private var filtered: [VaultEntry] {
@@ -52,8 +53,7 @@ struct VaultListView: View {
                 Task {
                     let success = await service.unlock()
                     if success {
-                        await service.loadEntries()
-                        service.state = .ready
+                        await service.startup()
                     }
                 }
             }
@@ -121,7 +121,7 @@ struct VaultListView: View {
                         Button("Copy Username") {
                             guard !entry.user.isEmpty else { return }
                             Clipboard.copyAndClear(entry.user)
-                            dismissPopover()
+                            dismiss()
                         }
                     }
                 }
@@ -136,7 +136,10 @@ struct VaultListView: View {
                     .foregroundStyle(.tertiary)
                 Spacer()
                 Button {
-                    Task { await service.startup() }
+                    Task {
+                        await service.sync()
+                        await service.loadEntries()
+                    }
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 11))
@@ -155,13 +158,7 @@ struct VaultListView: View {
     private func copyPassword(for entry: VaultEntry) async {
         guard let password = await service.getPassword(for: entry) else { return }
         Clipboard.copyAndClear(password)
-        dismissPopover()
-    }
-
-    private func dismissPopover() {
-        DispatchQueue.main.async {
-            NSApp.keyWindow?.close()
-        }
+        dismiss()
     }
 }
 

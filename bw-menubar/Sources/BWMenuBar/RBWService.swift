@@ -9,7 +9,7 @@ enum VaultState: Equatable {
     case error(String)
 }
 
-@Observable
+@MainActor @Observable
 final class RBWService {
     var state: VaultState = .loading
     var entries: [VaultEntry] = []
