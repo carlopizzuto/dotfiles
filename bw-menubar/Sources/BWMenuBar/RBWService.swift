@@ -20,7 +20,7 @@ final class RBWService {
     /// - Parameter stdinData: Optional data written to stdin before launch.
     ///   Must be under ~64 KB (pipe buffer limit); larger payloads will deadlock.
     /// Runs on a detached task to avoid blocking the main actor.
-    private func shell(_ args: [String], stdinData: Data? = nil) async -> (output: String, exitCode: Int32) {
+    private func shell(_ args: [String], stdinData: Data? = nil, extraEnv: [String: String]? = nil) async -> (output: String, exitCode: Int32) {
         await Task.detached {
             let process = Process()
             let stdout = Pipe()
@@ -33,6 +33,9 @@ final class RBWService {
             var env = ProcessInfo.processInfo.environment
             let brewPaths = "/opt/homebrew/bin:/opt/homebrew/sbin"
             env["PATH"] = brewPaths + ":" + (env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin")
+            if let extraEnv {
+                for (key, value) in extraEnv { env[key] = value }
+            }
             process.environment = env
 
             // Write stdin before process.run(); safe for payloads under pipe buffer (~64 KB)
@@ -216,5 +219,64 @@ final class RBWService {
     /// Extract unique usernames from loaded entries for autocomplete.
     func listUsers() -> [String] {
         Array(Set(entries.map(\.user).filter { !$0.isEmpty })).sorted()
+    }
+
+    // MARK: - Entry detail operations
+
+    /// Build args for `rbw get --raw [--folder FOLDER] NAME [USER]`.
+    nonisolated static func getEntryDetailArgs(for entry: VaultEntry) -> [String] {
+        var args = ["rbw", "get", "--raw"]
+        if !entry.folder.isEmpty { args += ["--folder", entry.folder] }
+        args.append(entry.name)
+        if !entry.user.isEmpty { args.append(entry.user) }
+        return args
+    }
+
+    /// Build args for `rbw code [--folder FOLDER] NAME [USER]`.
+    nonisolated static func getTOTPCodeArgs(for entry: VaultEntry) -> [String] {
+        var args = ["rbw", "code"]
+        if !entry.folder.isEmpty { args += ["--folder", entry.folder] }
+        args.append(entry.name)
+        if !entry.user.isEmpty { args.append(entry.user) }
+        return args
+    }
+
+    /// Build args for `rbw edit [--folder FOLDER] NAME [USER]`.
+    nonisolated static func editEntryArgs(for entry: VaultEntry) -> [String] {
+        var args = ["rbw", "edit"]
+        if !entry.folder.isEmpty { args += ["--folder", entry.folder] }
+        args.append(entry.name)
+        if !entry.user.isEmpty { args.append(entry.user) }
+        return args
+    }
+
+    /// Build the stdin payload for `rbw edit`: line 1 = password, rest = notes.
+    nonisolated static func editStdin(password: String, notes: String?) -> String {
+        guard let notes, !notes.isEmpty else { return password }
+        return password + "\n" + notes
+    }
+
+    /// Fetch full entry detail as JSON.
+    func getEntryDetail(for entry: VaultEntry) async -> EntryDetail? {
+        let args = Self.getEntryDetailArgs(for: entry)
+        let (output, code) = await shell(args)
+        guard code == 0 else { return nil }
+        return EntryDetail.parse(json: output)
+    }
+
+    /// Fetch current TOTP code.
+    func getTOTPCode(for entry: VaultEntry) async -> String? {
+        let args = Self.getTOTPCodeArgs(for: entry)
+        let (output, code) = await shell(args)
+        return code == 0 && !output.isEmpty ? output : nil
+    }
+
+    /// Edit an entry's password and/or notes via EDITOR=cat trick.
+    func editEntry(for entry: VaultEntry, password: String, notes: String?) async -> Bool {
+        let args = Self.editEntryArgs(for: entry)
+        let stdin = Self.editStdin(password: password, notes: notes)
+        let stdinData = stdin.data(using: .utf8)
+        let (_, code) = await shell(args, stdinData: stdinData, extraEnv: ["EDITOR": "cat"])
+        return code == 0
     }
 }

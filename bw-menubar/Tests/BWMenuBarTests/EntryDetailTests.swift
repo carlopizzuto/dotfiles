@@ -85,4 +85,70 @@ struct EntryDetailTests {
         let detail = EntryDetail.parse(json: "not json")
         #expect(detail == nil)
     }
+
+    // MARK: - Edit entry args
+
+    @Test("builds edit args with all fields")
+    func editArgsAllFields() {
+        let entry = VaultEntry(name: "GitHub", user: "carlo", folder: "dev")
+        let args = RBWService.editEntryArgs(for: entry)
+        #expect(args == ["rbw", "edit", "--folder", "dev", "GitHub", "carlo"])
+    }
+
+    @Test("builds edit args with name only")
+    func editArgsNameOnly() {
+        let entry = VaultEntry(name: "WiFi", user: "", folder: "")
+        let args = RBWService.editEntryArgs(for: entry)
+        #expect(args == ["rbw", "edit", "WiFi"])
+    }
+
+    @Test("builds edit stdin with password and notes")
+    func editStdinWithNotes() {
+        let stdin = RBWService.editStdin(password: "newpass", notes: "line1\nline2")
+        #expect(stdin == "newpass\nline1\nline2")
+    }
+
+    @Test("builds edit stdin with password only")
+    func editStdinNoNotes() {
+        let stdin = RBWService.editStdin(password: "newpass", notes: nil)
+        #expect(stdin == "newpass")
+    }
+
+    @Test("builds edit stdin with password and empty notes")
+    func editStdinEmptyNotes() {
+        let stdin = RBWService.editStdin(password: "newpass", notes: "")
+        #expect(stdin == "newpass")
+    }
+
+    // MARK: - Detail entry args
+
+    @Test("builds getEntryDetail args with folder and user")
+    func detailArgsAllFields() {
+        let entry = VaultEntry(name: "GitHub", user: "carlo", folder: "dev")
+        let args = RBWService.getEntryDetailArgs(for: entry)
+        #expect(args == ["rbw", "get", "--raw", "--folder", "dev", "GitHub", "carlo"])
+    }
+
+    @Test("builds getEntryDetail args with name only")
+    func detailArgsNameOnly() {
+        let entry = VaultEntry(name: "WiFi", user: "", folder: "")
+        let args = RBWService.getEntryDetailArgs(for: entry)
+        #expect(args == ["rbw", "get", "--raw", "WiFi"])
+    }
+
+    // MARK: - TOTP args
+
+    @Test("builds getTOTPCode args with folder and user")
+    func totpArgsAllFields() {
+        let entry = VaultEntry(name: "GitHub", user: "carlo", folder: "dev")
+        let args = RBWService.getTOTPCodeArgs(for: entry)
+        #expect(args == ["rbw", "code", "--folder", "dev", "GitHub", "carlo"])
+    }
+
+    @Test("builds getTOTPCode args with name only")
+    func totpArgsNameOnly() {
+        let entry = VaultEntry(name: "WiFi", user: "", folder: "")
+        let args = RBWService.getTOTPCodeArgs(for: entry)
+        #expect(args == ["rbw", "code", "WiFi"])
+    }
 }
