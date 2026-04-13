@@ -1,6 +1,16 @@
 // Sources/BWMenuBar/EntryDetail.swift
 import Foundation
 
+struct EntryField {
+    let name: String
+    let value: String
+}
+
+struct PasswordHistoryItem {
+    let password: String
+    let lastUsedDate: String
+}
+
 struct EntryDetail {
     let id: String
     let name: String
@@ -10,8 +20,8 @@ struct EntryDetail {
     let uris: [String]
     let folder: String?
     let notes: String?
-    let fields: [(name: String, value: String)]
-    let history: [(password: String, lastUsedDate: String)]
+    let fields: [EntryField]
+    let history: [PasswordHistoryItem]
 
     static func parse(json: String) -> EntryDetail? {
         guard let data = json.data(using: .utf8),
@@ -30,17 +40,17 @@ struct EntryDetail {
         let notes = obj["notes"] as? String
 
         let rawFields = obj["fields"] as? [[String: Any]] ?? []
-        let fields = rawFields.compactMap { dict -> (name: String, value: String)? in
-            guard let name = dict["name"] as? String,
-                  let value = dict["value"] as? String else { return nil }
-            return (name: name, value: value)
+        let fields = rawFields.compactMap { dict -> EntryField? in
+            guard let name = dict["name"] as? String else { return nil }
+            let value = dict["value"] as? String ?? ""
+            return EntryField(name: name, value: value)
         }
 
         let rawHistory = obj["history"] as? [[String: Any]] ?? []
-        let history = rawHistory.compactMap { dict -> (password: String, lastUsedDate: String)? in
+        let history = rawHistory.compactMap { dict -> PasswordHistoryItem? in
             guard let pw = dict["password"] as? String,
                   let date = dict["last_used_date"] as? String else { return nil }
-            return (password: pw, lastUsedDate: date)
+            return PasswordHistoryItem(password: pw, lastUsedDate: date)
         }
 
         return EntryDetail(

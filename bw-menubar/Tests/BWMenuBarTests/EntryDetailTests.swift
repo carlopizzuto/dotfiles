@@ -1,3 +1,4 @@
+// Tests/BWMenuBarTests/EntryDetailTests.swift
 import Testing
 @testable import BWMenuBar
 
@@ -44,6 +45,7 @@ struct EntryDetailTests {
         #expect(detail!.fields[0].value == "code-123")
         #expect(detail!.history.count == 1)
         #expect(detail!.history[0].password == "oldpass")
+        #expect(detail!.history[0].lastUsedDate == "2026-01-01T00:00:00Z")
     }
 
     @Test("parses minimal JSON with nulls and empty arrays")
