@@ -20,7 +20,7 @@ struct VaultListView: View {
                         await service.loadEntries()
                         confirmationMessage = "Entry added"
                         try? await Task.sleep(for: .seconds(2))
-                        confirmationMessage = nil
+                        if !Task.isCancelled { confirmationMessage = nil }
                     }
                 }
             } else {
