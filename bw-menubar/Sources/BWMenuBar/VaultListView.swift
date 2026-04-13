@@ -3,8 +3,7 @@ import SwiftUI
 
 struct VaultListView: View {
     let service: RBWService
-    @Environment(\.dismiss) private var dismiss
-    @State private var searchText = ""
+@State private var searchText = ""
     @State private var showingAddEntry = false
     @State private var confirmationMessage: String?
     @State private var selectedEntry: VaultEntry?
@@ -199,11 +198,6 @@ struct VaultListView: View {
         Clipboard.copyAndClear(password)
     }
 
-    private func closePopover() {
-        dismiss()
-        // Fallback: dismiss() may not be wired for MenuBarExtra(.window)
-        NSApp.keyWindow?.close()
-    }
 }
 
 // MARK: - Entry Row
