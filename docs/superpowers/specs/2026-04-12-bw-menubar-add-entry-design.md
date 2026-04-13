@@ -91,26 +91,22 @@ func listFolders() -> [String]
 
 ### shell() Enhancement
 
-The existing `shell(_ args:)` helper needs an optional `extraEnv` parameter so `addEntry` can pass custom environment variables:
+The existing `shell(_ args:)` helper needs an optional `stdinData` parameter so `addEntry` can pipe the password:
 
 ```swift
-private func shell(_ args: [String], extraEnv: [String: String] = [:]) async -> (output: String, exitCode: Int32)
+private func shell(_ args: [String], stdinData: Data? = nil) async -> (output: String, exitCode: Int32)
 ```
 
-The Homebrew PATH injection remains. `extraEnv` entries are merged on top.
+When `stdinData` is provided, set `process.standardInput` to a Pipe and write the data to it before closing.
 
-### The EDITOR Trick
+### Stdin Password Piping
 
-`rbw add` opens `$EDITOR` to collect the password (first line) and notes (remainder). To programmatically supply the password, `addEntry` passes extra env vars:
+`rbw add` reads the password from stdin when not connected to a TTY (no EDITOR needed). The first line is the password:
 
 ```swift
-let extraEnv = [
-    "EDITOR": "sh -c 'printf \"%s\" \"$RBW_PASSWORD\" > \"$1\"' --",
-    "RBW_PASSWORD": password
-]
+let passwordData = password.data(using: .utf8)
+await shell(["rbw", "add", name, user, "--uri", uri, "--folder", folder], stdinData: passwordData)
 ```
-
-This sets EDITOR to a shell one-liner that writes the password env var into the temp file `rbw add` provides as `$1`.
 
 ### generatePassword (preview only)
 
