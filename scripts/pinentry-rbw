@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# pinentry-rbw — Touch ID-backed pinentry for rbw
+# Setup: echo 'your-master-password' | ~/.dotfiles/scripts/keychain-touchid store rbw-master rbw
+# After that, rbw unlock triggers Touch ID.
+set -euo pipefail
+
+KEYCHAIN_TOOL="$HOME/.dotfiles/scripts/keychain-touchid"
+
+CACHED="$("$KEYCHAIN_TOOL" get rbw-master rbw 2>/dev/null || true)"
+
+if [[ -z "$CACHED" ]]; then
+    echo "OK No keychain entry"
+    while IFS= read -r line; do
+        case "${line%% *}" in
+            GETPIN)
+                echo "ERR 83886179 No keychain entry — run: echo 'password' | ~/.dotfiles/scripts/keychain-touchid store rbw-master rbw"
+                ;;
+            BYE)
+                echo "OK closing connection"
+                exit 0
+                ;;
+            *)
+                echo "OK"
+                ;;
+        esac
+    done
+else
+    echo "OK Pleased to meet you"
+    while IFS= read -r line; do
+        case "${line%% *}" in
+            GETPIN)
+                echo "D $CACHED"
+                echo "OK"
+                ;;
+            BYE)
+                echo "OK closing connection"
+                exit 0
+                ;;
+            *)
+                echo "OK"
+                ;;
+        esac
+    done
+fi

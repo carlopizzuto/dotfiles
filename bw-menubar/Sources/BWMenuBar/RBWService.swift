@@ -27,6 +27,12 @@ final class RBWService {
             process.standardOutput = stdout
             process.standardError = Pipe()
 
+            // LaunchAgent/app bundles get a minimal PATH — include Homebrew
+            var env = ProcessInfo.processInfo.environment
+            let brewPaths = "/opt/homebrew/bin:/opt/homebrew/sbin"
+            env["PATH"] = brewPaths + ":" + (env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin")
+            process.environment = env
+
             do {
                 try process.run()
             } catch {
