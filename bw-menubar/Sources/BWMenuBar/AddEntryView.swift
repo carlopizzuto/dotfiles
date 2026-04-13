@@ -13,11 +13,13 @@ struct AddEntryView: View {
     @State private var folder = ""
 
     @State private var generateMode = false
-    @State private var generatedPassword = ""
+    @State private var passwordIsGenerated = false
     @State private var genLength: Double = 16
     @State private var noSymbols = false
     @State private var onlyNumbers = false
     @State private var diceware = false
+    @State private var suppressRegenerate = false
+    @State private var isRegenerating = false
 
     @State private var isSaving = false
     @State private var errorMessage: String?
@@ -106,8 +108,14 @@ struct AddEntryView: View {
     private var passwordSection: some View {
         LabeledField("PASSWORD") {
             HStack(spacing: 6) {
-                SecureField("password", text: $password)
-                    .textFieldStyle(.roundedBorder)
+                if generateMode {
+                    TextField("password", text: $password)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 13, design: .monospaced))
+                } else {
+                    SecureField("password", text: $password)
+                        .textFieldStyle(.roundedBorder)
+                }
                 if !password.isEmpty {
                     Button {
                         Clipboard.copyAndClear(password)
@@ -120,6 +128,10 @@ struct AddEntryView: View {
                     .help("Copy password")
                 }
             }
+        }
+        .onChange(of: password) { _, _ in
+            // User edited the password — no longer matches generated value
+            if !isRegenerating { passwordIsGenerated = false }
         }
     }
 
@@ -145,6 +157,7 @@ struct AddEntryView: View {
                     .foregroundStyle(.blue)
                 }
                 .buttonStyle(.plain)
+                .disabled(isRegenerating || isSaving)
             }
         }
         .onChange(of: generateMode) { _, newValue in
@@ -184,15 +197,19 @@ struct AddEntryView: View {
         .background(.quaternary.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .onChange(of: genLength) { _, _ in
+            guard !suppressRegenerate else { return }
             Task { await regenerate() }
         }
         .onChange(of: noSymbols) { _, _ in
+            guard !suppressRegenerate else { return }
             Task { await regenerate() }
         }
         .onChange(of: onlyNumbers) { _, _ in
+            guard !suppressRegenerate else { return }
             Task { await regenerate() }
         }
         .onChange(of: diceware) { _, newValue in
+            suppressRegenerate = true
             if newValue {
                 noSymbols = false
                 onlyNumbers = false
@@ -200,6 +217,7 @@ struct AddEntryView: View {
             } else {
                 genLength = 16
             }
+            suppressRegenerate = false
             Task { await regenerate() }
         }
     }
@@ -243,6 +261,9 @@ struct AddEntryView: View {
     // MARK: - Actions
 
     private func regenerate() async {
+        guard !isRegenerating else { return }
+        isRegenerating = true
+        defer { isRegenerating = false }
         guard let pw = await service.generatePassword(
             length: Int(genLength),
             noSymbols: noSymbols,
@@ -250,7 +271,7 @@ struct AddEntryView: View {
             diceware: diceware
         ) else { return }
         password = pw
-        generatedPassword = pw
+        passwordIsGenerated = true
     }
 
     private func save() async {
@@ -260,7 +281,7 @@ struct AddEntryView: View {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         let success: Bool
 
-        if generateMode && password == generatedPassword && !generatedPassword.isEmpty {
+        if generateMode && passwordIsGenerated {
             // User didn't edit the generated password — use rbw generate to save
             success = await service.generateEntry(
                 name: trimmedName, user: user, length: Int(genLength),
