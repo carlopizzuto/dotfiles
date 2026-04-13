@@ -132,4 +132,79 @@ final class RBWService {
         if case .error = state { return }
         state = .ready
     }
+
+    // MARK: - Add entry operations
+
+    /// Build args for `rbw generate <length>` (preview only, no save).
+    nonisolated static func generateArgs(length: Int, noSymbols: Bool, onlyNumbers: Bool, diceware: Bool) -> [String] {
+        var args = ["rbw", "generate"]
+        if noSymbols { args.append("--no-symbols") }
+        if onlyNumbers { args.append("--only-numbers") }
+        if diceware { args.append("--diceware") }
+        args.append("\(length)")
+        return args
+    }
+
+    /// Build args for `rbw add <name> [user]` with optional flags.
+    nonisolated static func addEntryArgs(name: String, user: String, uri: String, folder: String) -> [String] {
+        var args = ["rbw", "add"]
+        if !uri.isEmpty { args += ["--uri", uri] }
+        if !folder.isEmpty { args += ["--folder", folder] }
+        args.append(name)
+        if !user.isEmpty { args.append(user) }
+        return args
+    }
+
+    /// Build args for `rbw generate <length> <name> [user]` with optional flags (saves entry).
+    nonisolated static func generateEntryArgs(
+        name: String, user: String, length: Int,
+        uri: String, folder: String,
+        noSymbols: Bool, onlyNumbers: Bool, diceware: Bool
+    ) -> [String] {
+        var args = ["rbw", "generate"]
+        if noSymbols { args.append("--no-symbols") }
+        if onlyNumbers { args.append("--only-numbers") }
+        if diceware { args.append("--diceware") }
+        if !uri.isEmpty { args += ["--uri", uri] }
+        if !folder.isEmpty { args += ["--folder", folder] }
+        args.append("\(length)")
+        args.append(name)
+        if !user.isEmpty { args.append(user) }
+        return args
+    }
+
+    /// Generate a password without saving (for form preview).
+    func generatePassword(length: Int, noSymbols: Bool, onlyNumbers: Bool, diceware: Bool) async -> String? {
+        let args = Self.generateArgs(length: length, noSymbols: noSymbols, onlyNumbers: onlyNumbers, diceware: diceware)
+        let (output, code) = await shell(args)
+        return code == 0 && !output.isEmpty ? output : nil
+    }
+
+    /// Add a login entry with a manual password piped via stdin.
+    func addEntry(name: String, user: String, password: String, uri: String, folder: String) async -> Bool {
+        let args = Self.addEntryArgs(name: name, user: user, uri: uri, folder: folder)
+        let stdinData = password.data(using: .utf8)
+        let (_, code) = await shell(args, stdinData: stdinData)
+        return code == 0
+    }
+
+    /// Add a login entry with a generated password.
+    func generateEntry(
+        name: String, user: String, length: Int,
+        uri: String, folder: String,
+        noSymbols: Bool, onlyNumbers: Bool, diceware: Bool
+    ) async -> Bool {
+        let args = Self.generateEntryArgs(
+            name: name, user: user, length: length,
+            uri: uri, folder: folder,
+            noSymbols: noSymbols, onlyNumbers: onlyNumbers, diceware: diceware
+        )
+        let (_, code) = await shell(args)
+        return code == 0
+    }
+
+    /// Extract unique folder names from loaded entries for autocomplete.
+    func listFolders() -> [String] {
+        Array(Set(entries.map(\.folder).filter { !$0.isEmpty })).sorted()
+    }
 }
