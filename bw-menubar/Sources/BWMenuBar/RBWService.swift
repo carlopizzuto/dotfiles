@@ -17,6 +17,8 @@ final class RBWService {
     // MARK: - Shell helper
 
     /// Run a command via /usr/bin/env and return (stdout, exitCode).
+    /// - Parameter stdinData: Optional data written to stdin before launch.
+    ///   Must be under ~64 KB (pipe buffer limit); larger payloads will deadlock.
     /// Runs on a detached task to avoid blocking the main actor.
     private func shell(_ args: [String], stdinData: Data? = nil) async -> (output: String, exitCode: Int32) {
         await Task.detached {
@@ -33,11 +35,11 @@ final class RBWService {
             env["PATH"] = brewPaths + ":" + (env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin")
             process.environment = env
 
-            // Pipe stdin data if provided
+            // Write stdin before process.run(); safe for payloads under pipe buffer (~64 KB)
             if let stdinData {
                 let stdinPipe = Pipe()
                 process.standardInput = stdinPipe
-                stdinPipe.fileHandleForWriting.write(stdinData)
+                try? stdinPipe.fileHandleForWriting.write(contentsOf: stdinData)
                 stdinPipe.fileHandleForWriting.closeFile()
             }
 
