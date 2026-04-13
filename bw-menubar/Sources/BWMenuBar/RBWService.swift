@@ -18,7 +18,7 @@ final class RBWService {
 
     /// Run a command via /usr/bin/env and return (stdout, exitCode).
     /// Runs on a detached task to avoid blocking the main actor.
-    private func shell(_ args: [String]) async -> (output: String, exitCode: Int32) {
+    private func shell(_ args: [String], stdinData: Data? = nil) async -> (output: String, exitCode: Int32) {
         await Task.detached {
             let process = Process()
             let stdout = Pipe()
@@ -32,6 +32,14 @@ final class RBWService {
             let brewPaths = "/opt/homebrew/bin:/opt/homebrew/sbin"
             env["PATH"] = brewPaths + ":" + (env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin")
             process.environment = env
+
+            // Pipe stdin data if provided
+            if let stdinData {
+                let stdinPipe = Pipe()
+                process.standardInput = stdinPipe
+                stdinPipe.fileHandleForWriting.write(stdinData)
+                stdinPipe.fileHandleForWriting.closeFile()
+            }
 
             do {
                 try process.run()
