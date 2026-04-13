@@ -275,7 +275,7 @@ final class RBWService {
     func editEntry(for entry: VaultEntry, password: String, notes: String?) async -> Bool {
         let args = Self.editEntryArgs(for: entry)
         let stdin = Self.editStdin(password: password, notes: notes)
-        let stdinData = stdin.data(using: .utf8)
+        let stdinData = Data(stdin.utf8)
         let (_, code) = await shell(args, stdinData: stdinData, extraEnv: ["EDITOR": "cat"])
         return code == 0
     }
