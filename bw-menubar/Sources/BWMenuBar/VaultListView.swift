@@ -7,6 +7,7 @@ struct VaultListView: View {
     @State private var searchText = ""
     @State private var showingAddEntry = false
     @State private var confirmationMessage: String?
+    @State private var selectedEntry: VaultEntry?
 
     private var filtered: [VaultEntry] {
         service.entries.filter { $0.matches(query: searchText) }
@@ -14,7 +15,16 @@ struct VaultListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if showingAddEntry {
+            if let selectedEntry {
+                EntryDetailView(
+                    entry: selectedEntry,
+                    service: service,
+                    isPresented: Binding(
+                        get: { self.selectedEntry != nil },
+                        set: { if !$0 { self.selectedEntry = nil } }
+                    )
+                )
+            } else if showingAddEntry {
                 AddEntryView(service: service, isPresented: $showingAddEntry) {
                     Task {
                         await service.loadEntries()
@@ -124,9 +134,11 @@ struct VaultListView: View {
                     .frame(height: 80)
             } else {
                 List(filtered) { entry in
-                    EntryRow(entry: entry) {
+                    EntryRow(entry: entry, onSelect: {
+                        selectedEntry = entry
+                    }, onQuickCopy: {
                         Task { await copyPassword(for: entry) }
-                    }
+                    })
                     .contextMenu {
                         Button("Copy Password") {
                             Task { await copyPassword(for: entry) }
@@ -134,7 +146,6 @@ struct VaultListView: View {
                         Button("Copy Username") {
                             guard !entry.user.isEmpty else { return }
                             Clipboard.copyAndClear(entry.user)
-                            closePopover()
                         }
                     }
                 }
@@ -186,7 +197,6 @@ struct VaultListView: View {
     private func copyPassword(for entry: VaultEntry) async {
         guard let password = await service.getPassword(for: entry) else { return }
         Clipboard.copyAndClear(password)
-        closePopover()
     }
 
     private func closePopover() {
@@ -201,21 +211,53 @@ struct VaultListView: View {
 private struct EntryRow: View {
     let entry: VaultEntry
     let onSelect: () -> Void
+    let onQuickCopy: () -> Void
+    @State private var showCopied = false
 
     var body: some View {
         Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.name)
-                    .font(.system(size: 13, weight: .medium))
-                    .lineLimit(1)
-                if !entry.user.isEmpty {
-                    Text(entry.user)
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    ZStack(alignment: .leading) {
+                        Text(entry.name)
+                            .font(.system(size: 13, weight: .medium))
+                            .lineLimit(1)
+                            .opacity(showCopied ? 0 : 1)
+                            .animation(.easeInOut(duration: 0.2), value: showCopied)
+
+                        Text("Copied")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.green)
+                            .opacity(showCopied ? 1 : 0)
+                            .offset(y: showCopied ? 0 : 4)
+                            .animation(.easeInOut(duration: 0.2), value: showCopied)
+                    }
+                    if !entry.user.isEmpty {
+                        Text(entry.user)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button {
+                    guard !showCopied else { return }
+                    onQuickCopy()
+                    showCopied = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        showCopied = false
+                    }
+                } label: {
+                    Image(systemName: "doc.on.doc")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .padding(6)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .help("Copy password")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .padding(.vertical, 2)
         }
