@@ -5,6 +5,8 @@ struct VaultListView: View {
     let service: RBWService
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
+    @State private var showingAddEntry = false
+    @State private var confirmationMessage: String?
 
     private var filtered: [VaultEntry] {
         service.entries.filter { $0.matches(query: searchText) }
@@ -12,15 +14,26 @@ struct VaultListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            switch service.state {
-            case .loading:
-                loadingView
-            case .locked:
-                lockedView
-            case .error(let message):
-                errorView(message)
-            case .ready:
-                readyView
+            if showingAddEntry {
+                AddEntryView(service: service, isPresented: $showingAddEntry) {
+                    Task {
+                        await service.loadEntries()
+                        confirmationMessage = "Entry added"
+                        try? await Task.sleep(for: .seconds(2))
+                        confirmationMessage = nil
+                    }
+                }
+            } else {
+                switch service.state {
+                case .loading:
+                    loadingView
+                case .locked:
+                    lockedView
+                case .error(let message):
+                    errorView(message)
+                case .ready:
+                    readyView
+                }
             }
         }
         .frame(width: 360)
@@ -131,10 +144,25 @@ struct VaultListView: View {
 
             // Entry count footer
             HStack {
-                Text("\(filtered.count) entries")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
+                if let confirmationMessage {
+                    Text(confirmationMessage)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.green)
+                } else {
+                    Text("\(filtered.count) entries")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
                 Spacer()
+                Button {
+                    showingAddEntry = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Add entry")
                 Button {
                     Task {
                         await service.sync()
