@@ -6,6 +6,7 @@ struct CopyableField<Content: View>: View {
     let text: String
     @ViewBuilder let content: Content
     @State private var showCopied = false
+    @State private var isHovering = false
 
     var body: some View {
         Button {
@@ -34,6 +35,11 @@ struct CopyableField<Content: View>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(.primary.opacity(isHovering ? 0.06 : 0))
+        )
+        .onHover { isHovering = $0 }
     }
 }
 

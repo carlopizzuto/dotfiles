@@ -118,7 +118,7 @@ struct EntryDetailView: View {
         let hasContent = !detail.username.isEmpty || !detail.password.isEmpty
             || detail.hasTotp || !detail.fields.isEmpty
         if hasContent {
-            GroupCard(title: "CREDENTIALS") {
+            GroupCard {
                 VStack(alignment: .leading, spacing: 8) {
                     if !detail.username.isEmpty {
                         fieldLabel("USERNAME")
@@ -176,7 +176,7 @@ struct EntryDetailView: View {
     private func detailsCard(_ detail: EntryDetail) -> some View {
         let hasContent = !detail.uris.isEmpty || detail.folder != nil
         if hasContent {
-            GroupCard(title: "DETAILS") {
+            GroupCard {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(Array(detail.uris.enumerated()), id: \.offset) { index, uri in
                         fieldLabel(detail.uris.count > 1 ? "URI \(index + 1)" : "URI")
@@ -205,7 +205,7 @@ struct EntryDetailView: View {
     @ViewBuilder
     private func notesCard(_ detail: EntryDetail) -> some View {
         if let notes = detail.notes, !notes.isEmpty {
-            GroupCard(title: "NOTES", trailing: {
+            GroupCard(trailing: {
                 HStack(spacing: 6) {
                     CopyAllButton(text: notes, isCopied: $notesCopied)
                     if !editingNotes {
@@ -434,28 +434,24 @@ struct EntryDetailView: View {
 // MARK: - GroupCard
 
 private struct GroupCard<Trailing: View, Content: View>: View {
-    let title: String
     let trailing: Trailing
     @ViewBuilder let content: Content
 
     init(
-        title: String,
         @ViewBuilder trailing: () -> Trailing = { EmptyView() },
         @ViewBuilder content: () -> Content
     ) {
-        self.title = title
         self.trailing = trailing()
         self.content = content()
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(title)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                trailing
+            if Trailing.self != EmptyView.self {
+                HStack {
+                    Spacer()
+                    trailing
+                }
             }
             content
         }
