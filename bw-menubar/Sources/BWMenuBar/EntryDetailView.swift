@@ -20,6 +20,9 @@ struct EntryDetailView: View {
     @State private var isSaving = false
     @State private var notesCopied = false
     @State private var totpTimer: Timer?
+    @State private var isFetchingTOTP = false
+    @State private var editBaselinePassword = ""
+    @State private var editBaselineNotes: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -132,6 +135,7 @@ struct EntryDetailView: View {
                             if !editingPassword {
                                 Button {
                                     editPasswordText = detail.password
+                                    editBaselineNotes = detail.notes
                                     editError = nil
                                     editingPassword = true
                                 } label: {
@@ -207,6 +211,7 @@ struct EntryDetailView: View {
                     if !editingNotes {
                         Button {
                             editNotesText = notes
+                            editBaselinePassword = detail.password
                             editError = nil
                             editingNotes = true
                         } label: {
@@ -373,9 +378,11 @@ struct EntryDetailView: View {
         totpTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             Task { @MainActor in
                 let remaining = 30 - (Int(Date().timeIntervalSince1970) % 30)
-                if remaining == 30 || totpSecondsRemaining <= 1 {
-                    // Code just rolled over, fetch new one
+                if totpSecondsRemaining <= 1 {
+                    guard !isFetchingTOTP else { return }
+                    isFetchingTOTP = true
                     await refreshTOTP()
+                    isFetchingTOTP = false
                 } else {
                     totpSecondsRemaining = remaining
                 }
@@ -390,7 +397,7 @@ struct EntryDetailView: View {
         let success = await service.editEntry(
             for: entry,
             password: editPasswordText,
-            notes: detail?.notes
+            notes: editBaselineNotes
         )
 
         isSaving = false
@@ -409,7 +416,7 @@ struct EntryDetailView: View {
 
         let success = await service.editEntry(
             for: entry,
-            password: detail?.password ?? "",
+            password: editBaselinePassword,
             notes: editNotesText.isEmpty ? nil : editNotesText
         )
 
