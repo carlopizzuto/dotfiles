@@ -135,12 +135,19 @@ final class RBWService {
 
     // MARK: - Add entry operations
 
+    /// Password generation mode flags shared by generate commands.
+    nonisolated private static func passwordModeFlags(noSymbols: Bool, onlyNumbers: Bool, diceware: Bool) -> [String] {
+        var flags: [String] = []
+        if noSymbols { flags.append("--no-symbols") }
+        if onlyNumbers { flags.append("--only-numbers") }
+        if diceware { flags.append("--diceware") }
+        return flags
+    }
+
     /// Build args for `rbw generate <length>` (preview only, no save).
     nonisolated static func generateArgs(length: Int, noSymbols: Bool, onlyNumbers: Bool, diceware: Bool) -> [String] {
         var args = ["rbw", "generate"]
-        if noSymbols { args.append("--no-symbols") }
-        if onlyNumbers { args.append("--only-numbers") }
-        if diceware { args.append("--diceware") }
+        args += passwordModeFlags(noSymbols: noSymbols, onlyNumbers: onlyNumbers, diceware: diceware)
         args.append("\(length)")
         return args
     }
@@ -162,9 +169,7 @@ final class RBWService {
         noSymbols: Bool, onlyNumbers: Bool, diceware: Bool
     ) -> [String] {
         var args = ["rbw", "generate"]
-        if noSymbols { args.append("--no-symbols") }
-        if onlyNumbers { args.append("--only-numbers") }
-        if diceware { args.append("--diceware") }
+        args += passwordModeFlags(noSymbols: noSymbols, onlyNumbers: onlyNumbers, diceware: diceware)
         if !uri.isEmpty { args += ["--uri", uri] }
         if !folder.isEmpty { args += ["--folder", folder] }
         args.append("\(length)")
