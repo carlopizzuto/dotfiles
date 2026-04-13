@@ -97,8 +97,11 @@ struct AddEntryView: View {
                     .textFieldStyle(.roundedBorder)
             }
             LabeledField("USERNAME") {
-                TextField("email or username", text: $user)
-                    .textFieldStyle(.roundedBorder)
+                AutocompleteField(
+                    text: $user,
+                    placeholder: "email or username",
+                    suggestions: service.listUsers()
+                )
             }
         }
     }
@@ -231,8 +234,11 @@ struct AddEntryView: View {
                     .textFieldStyle(.roundedBorder)
             }
             LabeledField("FOLDER") {
-                TextField("optional", text: $folder)
-                    .textFieldStyle(.roundedBorder)
+                AutocompleteField(
+                    text: $folder,
+                    placeholder: "optional",
+                    suggestions: service.listFolders()
+                )
             }
         }
     }
@@ -324,6 +330,60 @@ private struct LabeledField<Content: View>: View {
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
             content
+        }
+    }
+}
+
+private struct AutocompleteField: View {
+    @Binding var text: String
+    let placeholder: String
+    let suggestions: [String]
+    @State private var showSuggestions = false
+    @FocusState private var isFocused: Bool
+
+    private var filtered: [String] {
+        guard !text.isEmpty else { return [] }
+        let q = text.lowercased()
+        return suggestions.filter {
+            $0.lowercased().contains(q) && $0.lowercased() != q
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.roundedBorder)
+                .focused($isFocused)
+                .onChange(of: text) { _, newValue in
+                    // Hide if user selected a suggestion (exact match exists)
+                    let exactMatch = suggestions.contains(where: { $0.lowercased() == newValue.lowercased() })
+                    showSuggestions = isFocused && !exactMatch
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if !focused { showSuggestions = false }
+                }
+
+            if showSuggestions && !filtered.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(filtered.prefix(5), id: \.self) { suggestion in
+                        Button {
+                            text = suggestion
+                            showSuggestions = false
+                        } label: {
+                            Text(suggestion)
+                                .font(.system(size: 12))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .background(Color.secondary.opacity(0.08))
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .padding(.top, 2)
+            }
         }
     }
 }

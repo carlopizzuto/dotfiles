@@ -212,4 +212,9 @@ final class RBWService {
     func listFolders() -> [String] {
         Array(Set(entries.map(\.folder).filter { !$0.isEmpty })).sorted()
     }
+
+    /// Extract unique usernames from loaded entries for autocomplete.
+    func listUsers() -> [String] {
+        Array(Set(entries.map(\.user).filter { !$0.isEmpty })).sorted()
+    }
 }
