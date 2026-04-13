@@ -299,6 +299,7 @@ struct AddEntryView: View {
         isSaving = false
 
         if success {
+            isPresented = false
             onSaved()
         } else {
             errorMessage = "Failed to save entry. Check if an entry with this name already exists."
